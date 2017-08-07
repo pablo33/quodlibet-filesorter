@@ -16,21 +16,21 @@ class Getchunklist_test (unittest.TestCase):
 		(
 			('~/Genre/<artist>/<album>/[<cd> -][<track> -]<title>.<ext>', '[]'),
 			[	'~/Genre/<artist>/<album>/',
-    			'[<cd> -]',
-    			'[<track> -]',
-    			'<title>.<ext>']
+				'[<cd> -]',
+				'[<track> -]',
+				'<title>.<ext>']
 			),
 		(
 			('~/albumes/<autor>/<album>/[<cd> - ][<track> - ]<title>.<ext>', '[]'),
 			[	'~/albumes/<autor>/<album>/',
-    			'[<cd> - ]',
-    			'[<track> - ]',
-    			'<title>.<ext>']
+				'[<cd> - ]',
+				'[<track> - ]',
+				'<title>.<ext>']
 			),
 		(
 			('/albumes/<autor>/<album>', '[]'),
 			[	'/albumes/<autor>/<album>',
-    			]
+				]
 			),
 
 		(
@@ -72,6 +72,7 @@ class Getchunklist_test (unittest.TestCase):
 		for example, validate in self.known_values:
 			result = TM.Getchunklist (example[0],example[1])
 			self.assertEqual (result, validate)
+
 
 
 if __name__ == '__main__':

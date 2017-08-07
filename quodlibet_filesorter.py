@@ -1,9 +1,9 @@
 #!/usr/bin/python2
 
-import quodlibet, cPickle, sqlite3
+import quodlibet, cPickle, sqlite3, re, os
 
 
-__version__ = 1.0
+__version__ = 0.0
 
 
 #=====================================
@@ -45,6 +45,53 @@ def Getchunklist (fgstring, delimitters):
 	return chunklist
 
 
+userlibrary = os.path.join(os.getenv('HOME'),'.quodlibet/songs')
+
 
 if __name__ == '__main__':
 	print ('Running, have a good time')
+	# Open quodlibet database dumped
+	with open(userlibrary, 'r') as songsfile:
+		songs = cPickle.load(songsfile)
+	
+		# iterate over duped elements
+		for element in songs:
+			
+			fullpathfilename = str(element('~filename'))
+			extension = os.path.splitext (fullpathfilename)[1]
+
+			if 'filegroupping' in element.keys():
+				filegroupping = element('filegroupping')
+				if filegroupping.endswith ('.<ext>'):
+					addfilenameflag = False
+					filegroupping = filegroupping [:-6]
+				else:
+					addfilenameflag = True
+				chunklist = Getchunklist (filegroupping,'[]')
+				
+				print '\n','Chunklist = ', chunklist
+				targetpath = ''
+				for chunk in chunklist:
+					optionalflag = False
+					if chunk.startswith ('[') and chunk.endswith (']'):
+						optionalflag = True
+					formedchunk = chunk
+					taglist = re.findall ('<\w*>',chunk)
+					print 'chunk =', chunk
+					print 'taglist= ', taglist
+					for tag in taglist:
+						metaname = tag[1:-1]
+						print 'metaname=', metaname
+						if metaname in element.keys():
+							formedchunk = formedchunk.replace('<'+ metaname + '>',element(metaname))
+						elif not optionalflag:
+							formedchunk = ''
+							break
+					targetpath = targetpath + formedchunk
+				if targetpath.startswith ('~/'):
+					targetpath = element('~mountpoint') + targetpath [1:]
+				if addfilenameflag:
+					targetpath = targetpath + os.path.basename(element('~filename'))
+				else:
+					targetpath = targetpath + extension
+				print element('~filename'), "\n", targetpath, "\n"
