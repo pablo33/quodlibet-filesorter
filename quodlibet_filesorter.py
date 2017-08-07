@@ -46,22 +46,37 @@ def Getchunklist (fgstring, delimitters):
 
 
 userlibrary = os.path.join(os.getenv('HOME'),'.quodlibet/songs')
+userfilegrouppingtag = 'filegroupping'
+dbpathandname = userfilegrouppingtag + '.sqlite3'
 
 
 if __name__ == '__main__':
 	print ('Running, have a good time')
+	#initializing DB
+	if os.path.isfile(dbpathandname):
+		os.remove (dbpathandname)
+	con = sqlite3.connect (dbpathandname)
+	con.execute ('CREATE TABLE SongsTable \
+		(id INT PRIMARY KEY 	NOT NULL, \
+		mountpoint	TEXT 	NOT NULL, \
+		filefolder	TEXT 	NOT NULL, \
+		filename 	TEXT 	NOT NULL, \
+		format		TEXT 	NOT NULL, \
+		filegroupping TEXT 	NOT NULL, \
+		targetpath	TEXT 	NOT NULL)')
+
 	# Open quodlibet database dumped
 	with open(userlibrary, 'r') as songsfile:
 		songs = cPickle.load(songsfile)
-	
+		Id = 0	
 		# iterate over duped elements
 		for element in songs:
-			
+
 			fullpathfilename = str(element('~filename'))
 			extension = os.path.splitext (fullpathfilename)[1]
 
-			if 'filegroupping' in element.keys():
-				filegroupping = element('filegroupping')
+			if element(userfilegrouppingtag) != '':
+				filegroupping = element(userfilegrouppingtag)
 				if filegroupping.endswith ('.<ext>'):
 					addfilenameflag = False
 					filegroupping = filegroupping [:-6]
@@ -82,11 +97,19 @@ if __name__ == '__main__':
 					for tag in taglist:
 						metaname = tag[1:-1]
 						print 'metaname=', metaname
-						if metaname in element.keys():
-							formedchunk = formedchunk.replace('<'+ metaname + '>',element(metaname))
-						elif not optionalflag:
+						metavalue = element(metaname)
+						if metaname == 'tracknumber':
+							slashpos = metavalue.find('/')
+							if slashpos != -1:
+								metavalue = metavalue [:slashpos]
+							if metavalue.isnumeric():
+								metavalue = '{:0>2}'.format (metavalue)
+						formedchunk = formedchunk.replace('<'+ metaname + '>',metavalue)
+						if metaname not in element.keys() and optionalflag:
 							formedchunk = ''
 							break
+					if optionalflag and formedchunk != '':
+						formedchunk = formedchunk [1:-1]
 					targetpath = targetpath + formedchunk
 				if targetpath.startswith ('~/'):
 					targetpath = element('~mountpoint') + targetpath [1:]
@@ -94,4 +117,22 @@ if __name__ == '__main__':
 					targetpath = targetpath + os.path.basename(element('~filename'))
 				else:
 					targetpath = targetpath + extension
+				targetpath = os.path.normpath (targetpath)
 				print element('~filename'), "\n", targetpath, "\n"
+				valuetuple = ( 	Id,
+								element('~mountpoint'),
+								element(os.path.dirname(element('~filename'))),
+								element(os.path.basename(element('~filename'))),
+								element(element('~format')),
+								filegroupping,
+								targetpath
+					)
+				con.execute ("INSERT INTO SongsTable (	id, \
+													 	mountpoint, \
+													 	filefolder, \
+													 	filename, \
+													 	format, \
+													 	filegroupping,\
+													 	targetpath) VALUES (?,?,?,?,?,?,?)",valuetuple)
+				con.commit()
+				Id += 1
