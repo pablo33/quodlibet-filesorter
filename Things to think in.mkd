@@ -4,15 +4,14 @@
 - You can use your own tags to take part in the filename.  
 - Implement an explicit IF condition to manage empty tags.  
 - Implement renaming the file  
-- Use ~ sign at the beginning to reference the actual mount-point of the file.
-- Implement moving files and folders of info besides the music files and move them as a pack. (Wow!, no idea on how to make this work for now)
-
+- Use ~ sign at the beginning to reference the actual mount-point of the file.  
+- Implement moving anexed files and folders besides the music files and move them as a pack. (Wow!, no idea on how to make this work for now)  
 
 
 
 
 ## ==== Basis of the code =====
-How connect with quodlibet's music library  
+How to connect with quodlibet's music library  
 <https://quodlibet.readthedocs.io/en/quodlibet-3.1/development/faq.html>
 
 __An example:__  
