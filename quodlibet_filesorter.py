@@ -1,6 +1,9 @@
 #!/usr/bin/python2
+# -*- coding: utf_8 -*-
 
-import quodlibet, cPickle, sqlite3, re, os
+import quodlibet, cPickle
+import sqlite3, re, os, logging
+from datetime import datetime
 
 
 __version__ = 0.0
@@ -45,13 +48,38 @@ def Getchunklist (fgstring, delimitters):
 	return chunklist
 
 
+
+
 userlibrary = os.path.join(os.getenv('HOME'),'.quodlibet/songs')
 userfilegrouppingtag = 'filegroupping'
 dbpathandname = userfilegrouppingtag + '.sqlite3'
 
 
+
 if __name__ == '__main__':
-	print ('Running, have a good time')
+	print ('Running, have a good time.')
+
+	loginlevel = 'DEBUG'  # INFO ,DEBUG
+	logpath = './'
+	logging_file = os.path.join(logpath, userfilegrouppingtag+'.log')
+
+
+	# Getting current date and time
+	now = datetime.now()
+	today = "/".join([str(now.day), str(now.month), str(now.year)])
+	tohour = ":".join([str(now.hour), str(now.minute)])
+
+	print '\tLoginlevel: {}'.format(loginlevel)
+	logging.basicConfig(
+		level = loginlevel,
+		format = '%(asctime)s : %(levelname)s : %(message)s',
+		filename = logging_file,
+		filemode = 'w'  # a = add
+	)
+	print '\tLogging to: {}'.format(logging_file)
+	
+
+
 	#initializing DB
 	if os.path.isfile(dbpathandname):
 		os.remove (dbpathandname)
@@ -65,39 +93,43 @@ if __name__ == '__main__':
 		filegroupping TEXT 	NOT NULL, \
 		targetpath	TEXT 	NOT NULL)')
 
-	# Open quodlibet database dumped
+	# Open quodlibet dumped database 
 	with open(userlibrary, 'r') as songsfile:
 		songs = cPickle.load(songsfile)
 		Id = 0	
 		# iterate over duped elements
 		for element in songs:
 
-			fullpathfilename = str(element('~filename'))
-			extension = os.path.splitext (fullpathfilename)[1]
 
 			if element(userfilegrouppingtag) != '':
+				fullpathfilename = str(element('~filename'))
+				extension = os.path.splitext (fullpathfilename)[1]
 				filegroupping = element(userfilegrouppingtag)
 				if filegroupping.endswith ('.<ext>'):
 					addfilenameflag = False
 					filegroupping = filegroupping [:-6]
 				else:
 					addfilenameflag = True
+				#Splicing filegrouppingtag in chunks
 				chunklist = Getchunklist (filegroupping,'[]')
 				
-				print '\n','Chunklist = ', chunklist
+				logging.debug ('\nChunklist = {}'.format(chunklist))
 				targetpath = ''
 				for chunk in chunklist:
+					# Checking and flagging an optional chunk
 					optionalflag = False
 					if chunk.startswith ('[') and chunk.endswith (']'):
 						optionalflag = True
+					# We start with the chunk, and later perform tag substitutions
 					formedchunk = chunk
 					taglist = re.findall ('<\w*>',chunk)
-					print 'chunk =', chunk
-					print 'taglist= ', taglist
+					logging.debug ('\tchunk  = {}'.format(chunk))
+					logging.debug ('\ttaglist= {}'.format(taglist))
 					for tag in taglist:
 						metaname = tag[1:-1]
-						print 'metaname=', metaname
+						logging.debug ('\t\tmetaname = {}'.format(metaname))
 						metavalue = element(metaname)
+						# we trim the slash and total tracks if any
 						if metaname == 'tracknumber':
 							slashpos = metavalue.find('/')
 							if slashpos != -1:
@@ -105,34 +137,41 @@ if __name__ == '__main__':
 							if metavalue.isnumeric():
 								metavalue = '{:0>2}'.format (metavalue)
 						formedchunk = formedchunk.replace('<'+ metaname + '>',metavalue)
+						# Break and return an empty chunk if any tag is not present
 						if metaname not in element.keys() and optionalflag:
 							formedchunk = ''
 							break
 					if optionalflag and formedchunk != '':
 						formedchunk = formedchunk [1:-1]
 					targetpath = targetpath + formedchunk
+				# Adding a mountpoint lead if necessary
 				if targetpath.startswith ('~/'):
 					targetpath = element('~mountpoint') + targetpath [1:]
+				# Adding original filename if necessary
 				if addfilenameflag:
-					targetpath = targetpath + os.path.basename(element('~filename'))
+					targetpath = targetpath + os.path.basename(fullpathfilename)
 				else:
 					targetpath = targetpath + extension
 				targetpath = os.path.normpath (targetpath)
-				print element('~filename'), "\n", targetpath, "\n"
+				logging.debug ('\ttargetpath = {}'.format(targetpath))
 				valuetuple = ( 	Id,
-								element('~mountpoint'),
-								element(os.path.dirname(element('~filename'))),
-								element(os.path.basename(element('~filename'))),
-								element(element('~format')),
-								filegroupping,
+								str.decode(str(element('~mountpoint')),						'utf8'),
+								str.decode(str(os.path.dirname(element('~filename'))),		'utf8'),
+								str.decode(str(os.path.basename(element('~filename'))),		'utf8'),
+								str.decode(str(element('~format')),							'utf8'),
+								str.decode(str(filegroupping),								'utf8'),
 								targetpath
-					)
-				con.execute ("INSERT INTO SongsTable (	id, \
-													 	mountpoint, \
-													 	filefolder, \
-													 	filename, \
-													 	format, \
-													 	filegroupping,\
-													 	targetpath) VALUES (?,?,?,?,?,?,?)",valuetuple)
-				con.commit()
+								)
+				con.execute ("INSERT INTO SongsTable (	\
+								id, \
+								mountpoint, \
+								filefolder, \
+								filename, \
+								format, \
+								filegroupping,\
+								targetpath) VALUES (?,?,?,?,?,?,?)",valuetuple
+								)
 				Id += 1
+		con.commit()
+	print '\t{} songs processed.'.format(Id)
+	print 'Done!'
