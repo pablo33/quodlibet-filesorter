@@ -90,9 +90,10 @@ if __name__ == '__main__':
 		filefolder	TEXT 	NOT NULL, \
 		filename 	TEXT 	NOT NULL, \
 		format		TEXT 	NOT NULL, \
+		fullpathfilename	TEXT 	NOT NULL,\
 		filegroupping TEXT 	NOT NULL, \
 		targetpath	TEXT 	NOT NULL)')
-
+	con.execute ('CREATE VIEW "SF" AS SELECT DISTINCT filefolder FROM songstable')
 	# Open quodlibet dumped database 
 	with open(userlibrary, 'r') as songsfile:
 		songs = cPickle.load(songsfile)
@@ -159,18 +160,11 @@ if __name__ == '__main__':
 								str.decode(str(os.path.dirname(element('~filename'))),		'utf8'),
 								str.decode(str(os.path.basename(element('~filename'))),		'utf8'),
 								str.decode(str(element('~format')),							'utf8'),
+								str.decode(str(element('~filename')),						'utf8'),
 								str.decode(str(filegroupping),								'utf8'),
 								targetpath
 								)
-				con.execute ("INSERT INTO SongsTable (	\
-								id, \
-								mountpoint, \
-								filefolder, \
-								filename, \
-								format, \
-								filegroupping,\
-								targetpath) VALUES (?,?,?,?,?,?,?)",valuetuple
-								)
+				con.execute ("INSERT INTO SongsTable VALUES (?,?,?,?,?,?,?,?)", valuetuple)
 				Id += 1
 		con.commit()
 	print '\t{} songs processed.'.format(Id)
