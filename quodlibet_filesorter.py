@@ -94,6 +94,11 @@ if __name__ == '__main__':
 		filegroupping TEXT 	NOT NULL, \
 		targetpath	TEXT 	NOT NULL)')
 	con.execute ('CREATE VIEW "SF" AS SELECT DISTINCT filefolder FROM songstable')
+	con.execute ('CREATE TABLE Associatedfiles \
+		(originfile	TEXT 	NOT NULL, \
+		targetfile	TEXT 	NOT NULL, \
+		fileflag	TEXT 			)')
+
 	# Open quodlibet dumped database 
 	with open(userlibrary, 'r') as songsfile:
 		songs = cPickle.load(songsfile)
@@ -101,20 +106,24 @@ if __name__ == '__main__':
 		# iterate over duped elements
 		for element in songs:
 
-
 			if element(userfilegrouppingtag) != '':
-				fullpathfilename = str(element('~filename'))
+				fullpathfilename = str.decode(str(element('~filename')),'utf8')
+				mountpoint = str.decode(str(element('~mountpoint')),'utf8')
+				filefolder = os.path.dirname(fullpathfilename)
+				filename = os.path.basename(fullpathfilename)
 				extension = os.path.splitext (fullpathfilename)[1]
-				filegroupping = element(userfilegrouppingtag)
+				filegroupping = str.decode(str(element(userfilegrouppingtag)),'utf8')
+
 				if filegroupping.endswith ('.<ext>'):
 					addfilenameflag = False
-					filegroupping = filegroupping [:-6]
+					tmpfilegroupping = filegroupping [:-6]
 				else:
 					addfilenameflag = True
 				#Splicing filegrouppingtag in chunks
-				chunklist = Getchunklist (filegroupping,'[]')
+				chunklist = Getchunklist (tmpfilegroupping,'[]')
 				
-				logging.debug ('\nChunklist = {}'.format(chunklist))
+				logging.debug ('>>>>')
+				logging.debug ('Chunklist = {}'.format(chunklist))
 				targetpath = ''
 				for chunk in chunklist:
 					# Checking and flagging an optional chunk
@@ -137,6 +146,11 @@ if __name__ == '__main__':
 								metavalue = metavalue [:slashpos]
 							if metavalue.isnumeric():
 								metavalue = '{:0>2}'.format (metavalue)
+						metavalue = metavalue.replace('/','¬')
+						metavalue = metavalue.replace('\n',' ')
+						metavalue = metavalue.replace('\t',' ')
+						metavalue = metavalue.replace('|','-')
+						metavalue = metavalue.replace('~','-')
 						formedchunk = formedchunk.replace('<'+ metaname + '>',metavalue)
 						# Break and return an empty chunk if any tag is not present
 						if metaname not in element.keys() and optionalflag:
@@ -147,7 +161,7 @@ if __name__ == '__main__':
 					targetpath = targetpath + formedchunk
 				# Adding a mountpoint lead if necessary
 				if targetpath.startswith ('~/'):
-					targetpath = element('~mountpoint') + targetpath [1:]
+					targetpath = mountpoint + targetpath [1:]
 				# Adding original filename if necessary
 				if addfilenameflag:
 					targetpath = targetpath + os.path.basename(fullpathfilename)
@@ -156,16 +170,54 @@ if __name__ == '__main__':
 				targetpath = os.path.normpath (targetpath)
 				logging.debug ('\ttargetpath = {}'.format(targetpath))
 				valuetuple = ( 	Id,
-								str.decode(str(element('~mountpoint')),						'utf8'),
-								str.decode(str(os.path.dirname(element('~filename'))),		'utf8'),
-								str.decode(str(os.path.basename(element('~filename'))),		'utf8'),
+								mountpoint,
+								filefolder,
+								filename,
 								str.decode(str(element('~format')),							'utf8'),
-								str.decode(str(element('~filename')),						'utf8'),
-								str.decode(str(filegroupping),								'utf8'),
+								fullpathfilename,
+								filegroupping,
 								targetpath
 								)
 				con.execute ("INSERT INTO SongsTable VALUES (?,?,?,?,?,?,?,?)", valuetuple)
 				Id += 1
 		con.commit()
+	
 	print '\t{} songs processed.'.format(Id)
+	## Looking for Associated files and folders
+	logging.debug ('#'*43)
+	logging.debug ('## Looking for Associated files and folders')
+	logging.debug ('#'*43)
+	cursor = con.cursor ()
+	cursor.execute ('SELECT * FROM sf')
+	for contaninerfolder in cursor:
+		originfolder = contaninerfolder[0]
+		itemlist = os.listdir (originfolder)
+
+		Associatedlistdir = set ()
+		associatedpathscounter = 0
+
+		for item in itemlist:
+			typeflag = None
+			originfile = os.path.join(originfolder,item)
+			logging.debug ('originfile = ' + originfile)
+			targetfile = None
+			if os.path.isfile (originfile):
+				exist, associatedtargetfilepath = con.execute ('SELECT COUNT (fullpathfilename), targetpath \
+								FROM songstable WHERE \
+								fullpathfilename = ?', (originfile,)).fetchone()
+				#logging.debug ('\t existflag = ' + str(existflag[0]))
+				if exist:
+					logging.debug('\t > is already a processed file.')
+					Associatedlistdir.add (os.path.dirname(associatedtargetfilepath))
+					associatedpathscounter += 1
+					continue
+				logging.debug('\t > is going to be Associated')
+				typeflag = 'file'
+		print '\n supported processed files: {}'.format(associatedpathscounter)
+		print ' Number of associated target Paths: {}'.format (len(Associatedlistdir))
+		for i in Associatedlistdir:
+			print i
+
+
+		
 	print 'Done!'
