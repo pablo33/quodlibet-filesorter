@@ -47,7 +47,19 @@ def Getchunklist (fgstring, delimitters):
 		chunklist.append (fgstring[from_pos:to_pos])
 	return chunklist
 
+def CharChange (string):
+	""" Replaces character in a string with assigned values
+		"""
+	charset = {
+				'/\a\b\f\r\v':'',
+				'\n\t':' ',
+				'|~':'-',
+				}
+	for a in charset:
+		for i in a:
+			string = string.replace (i,charset[a])
 
+	return string
 
 
 userlibrary = os.path.join(os.getenv('HOME'),'.quodlibet/songs')
@@ -96,8 +108,8 @@ if __name__ == '__main__':
 	con.execute ('CREATE VIEW "SF" AS SELECT DISTINCT filefolder FROM songstable')
 	con.execute ('CREATE TABLE Associatedfiles \
 		(originfile	TEXT 	NOT NULL, \
-		targetfile	TEXT 	NOT NULL, \
-		fileflag	TEXT 			)')
+		targetpath	TEXT 	NOT NULL, \
+		fileflag	TEXT 	NOT NULL)')
 
 	# Open quodlibet dumped database 
 	with open(userlibrary, 'r') as songsfile:
@@ -146,11 +158,7 @@ if __name__ == '__main__':
 								metavalue = metavalue [:slashpos]
 							if metavalue.isnumeric():
 								metavalue = '{:0>2}'.format (metavalue)
-						metavalue = metavalue.replace('/','¬')
-						metavalue = metavalue.replace('\n',' ')
-						metavalue = metavalue.replace('\t',' ')
-						metavalue = metavalue.replace('|','-')
-						metavalue = metavalue.replace('~','-')
+						metavalue = CharChange (metavalue)  # clears some non allowed chars
 						formedchunk = formedchunk.replace('<'+ metaname + '>',metavalue)
 						# Break and return an empty chunk if any tag is not present
 						if metaname not in element.keys() and optionalflag:
@@ -193,8 +201,11 @@ if __name__ == '__main__':
 		originfolder = contaninerfolder[0]
 		itemlist = os.listdir (originfolder)
 
-		Associatedlistdir = set ()
-		associatedpathscounter = 0
+		ATargetdict = dict ()  # Associated target list, and number of leading coincidences.
+		Aitemdict = dict ()  # Associated items dictionary
+		leading_counter = 0  # Leading tracks counter on a folder.
+		associated_counter = 0  # Associated files counter.
+		afolder_counter = 0  # Associated folders counter.
 
 		for item in itemlist:
 			typeflag = None
@@ -202,21 +213,54 @@ if __name__ == '__main__':
 			logging.debug ('originfile = ' + originfile)
 			targetfile = None
 			if os.path.isfile (originfile):
-				exist, associatedtargetfilepath = con.execute ('SELECT COUNT (fullpathfilename), targetpath \
+				exist, a_targetfile_path = con.execute ('SELECT COUNT (fullpathfilename), targetpath \
 								FROM songstable WHERE \
 								fullpathfilename = ?', (originfile,)).fetchone()
-				#logging.debug ('\t existflag = ' + str(existflag[0]))
 				if exist:
-					logging.debug('\t > is already a processed file.')
-					Associatedlistdir.add (os.path.dirname(associatedtargetfilepath))
-					associatedpathscounter += 1
+					logging.debug('\t > file is already a processed file.')
+					a_targetfolder_path = os.path.dirname(a_targetfile_path)
+					if a_targetfolder_path in ATargetdict:
+						ATargetdict[a_targetfolder_path] = ATargetdict[a_targetfolder_path] + 1
+					else:
+						ATargetdict[a_targetfolder_path] = 1
+					leading_counter += 1
 					continue
-				logging.debug('\t > is going to be Associated')
+				logging.debug('\t > file is going to be Associated')
+				associated_counter += 1
 				typeflag = 'file'
-		print '\n supported processed files: {}'.format(associatedpathscounter)
-		print ' Number of associated target Paths: {}'.format (len(Associatedlistdir))
-		for i in Associatedlistdir:
-			print i
+			elif os.path.isdir (originfile):
+				exist = con.execute ('SELECT COUNT (filefolder) \
+								FROM sf WHERE \
+								filefolder LIKE ?', (originfile+'%',)).fetchone()[0]
+				if exist:
+					logging.debug ('\tFolder has some songs to be processed, I will not move this folder: {}'.format(originfile))
+					continue
+				logging.debug ('\t > folder is going to be associated: {}'.format(originfile))
+				afolder_counter += 1
+				typeflag = 'folder'
+			else:
+				logging.warning ('This may be a symbolic link. It will be discarded')
+				continue
+			Aitemdict [item] = typeflag
+		## Selecting the most suitable destination
+		winnerpath = ''
+		points = 0
+		for i in ATargetdict:
+			if ATargetdict[i] > points:
+				winnerpath, points = i, ATargetdict[i]
+					
+		## Inserting Associated files into DB
+		for i in Aitemdict:
+			valuetuple = (os.path.join(originfolder,i),   os.path.join(winnerpath,i),   Aitemdict[i])
+			con.execute ('INSERT INTO associatedfiles VALUES (?,?,?)', valuetuple)
+		logging.debug('\tleading processed files: {}'.format(leading_counter))
+		logging.debug('\tassociated processed files: {}'.format(associated_counter))
+		logging.debug('\tNumber of associated target Paths: {}'.format (len(ATargetdict)))
+	con.commit ()
+
+
+				
+
 
 
 		

@@ -1,4 +1,6 @@
 #!/usr/bin/python2
+# -*- coding: utf_8 -*-
+
 import unittest
 import quodlibet_filesorter
 #import datetime
@@ -9,6 +11,21 @@ import quodlibet_filesorter
 #####TESTS########
 
 TM = quodlibet_filesorter
+
+class CharChange_test (unittest.TestCase):
+	"""Replaces character in a string with assigned values
+		"""
+	known_values = (
+		('a string to\nreplace','a string to replace'),
+		('a string\tto replace','a string to replace'),
+		('a string\nto\treplace~again','a string to replace-again'),
+		('a string to\nreplace','a string to replace'),
+		('the same/again and\tagain','the sameagain and again')
+		)
+	def test_CharChange (self):
+		for example, validate in self.known_values:
+			result = TM.CharChange (example)
+			self.assertEqual (result, validate)
 
 class Getchunklist_test (unittest.TestCase):
 	'''testing Getchunklist function'''
