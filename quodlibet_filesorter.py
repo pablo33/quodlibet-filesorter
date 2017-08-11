@@ -122,14 +122,19 @@ if __name__ == '__main__':
 		fullpathfilename	TEXT 	NOT NULL,\
 		filegroupping TEXT 	NOT NULL, \
 		targetpath	TEXT 	NOT NULL, \
-		fileflag	TEXT 	NOT NULL DEFAULT ('file'))")
+		fileflag	TEXT 	NOT NULL)" )
 
 	con.execute ('CREATE VIEW "SF" AS SELECT DISTINCT filefolder FROM songstable')
 	con.execute ('CREATE TABLE Associatedfiles \
 		(originfile	TEXT 	NOT NULL, \
 		targetpath	TEXT 	NOT NULL, \
 		fileflag	TEXT 	NOT NULL)')
-	con.execute ('CREATE VIEW "filemovements" AS SELECT * FROM (SELECT * FROM associatedfiles UNION SELECT fullpathfilename as originfile, targetpath, fileflag FROM songstable) ORDER BY originfile')
+	con.execute ('CREATE VIEW "filemovements" AS SELECT * FROM (\
+				SELECT * FROM \
+					associatedfiles UNION \
+					SELECT fullpathfilename as originfile, targetpath, fileflag \
+					FROM songstable) \
+				WHERE originfile <> targetpath ORDER BY originfile')
 
 
 	# Open quodlibet dumped database, process it.
@@ -208,7 +213,7 @@ if __name__ == '__main__':
 								fullpathfilename,
 								filegroupping,
 								targetpath,
-								'file'
+								'Qfile'
 								)
 				con.execute ("INSERT INTO SongsTable VALUES (?,?,?,?,?,?,?,?,?)", valuetuple)
 				Id += 1
@@ -256,7 +261,7 @@ if __name__ == '__main__':
 					continue
 				logging.debug('\t > file is going to be Associated')
 				associated_counter += 1
-				typeflag = 'file'
+				typeflag = 'Afile'
 			elif os.path.isdir (originfile):
 				exist = con.execute ('SELECT COUNT (filefolder) \
 								FROM sf WHERE \
@@ -266,7 +271,7 @@ if __name__ == '__main__':
 					continue
 				logging.debug ('\t > folder is going to be associated: {}'.format(originfile))
 				afolder_counter += 1
-				typeflag = 'folder'
+				typeflag = 'Afolder'
 			else:
 				logging.warning ('This may be a symbolic link. It will be discarded')
 				continue
@@ -288,7 +293,6 @@ if __name__ == '__main__':
 	con.commit ()
 
 	### Moving files and folders (Filemovements)
-	## Discarding files wich are at the same place. (originfile = destinationfile)
 
 
 
