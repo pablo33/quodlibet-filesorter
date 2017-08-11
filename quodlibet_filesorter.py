@@ -61,11 +61,28 @@ def CharChange (string):
 
 	return string
 
+def filemove (origin, dest):
+	if itemcheck (origin) != 'file':
+		return None
+	while itemcheck (dest) != "" :
+		infomsg = "File already exists at destination, assigning a new name."
+		dest = Nextfilenumber (dest)
+		logging.info (infomsg + " >> " + dest)
 
-userlibrary = os.path.join(os.getenv('HOME'),'.quodlibet/songs')
-userfilegrouppingtag = 'filegroupping'
-dbpathandname = userfilegrouppingtag + '.sqlite3'
+	if not dummy:
+		if itemcheck (os.path.dirname(dest)) == '':
+			os.makedirs (os.path.dirname(dest))
+		shutil.move (origin, dest)
+	#print ("      > file has been moved. {}".format(dummymsg))
+	logging.info ("\tfile has been moved. {}".format(dummymsg))
+	return dest
 
+
+
+userlibrary = os.path.join(os.getenv('HOME'),'.quodlibet/songs')  # Place where the quod-libet cPickle object is
+userfilegrouppingtag = 'filegroupping'  # Tag name which defines the desired path structure for the file
+dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive for processing
+dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
 
 
 if __name__ == '__main__':
@@ -96,7 +113,7 @@ if __name__ == '__main__':
 	if os.path.isfile(dbpathandname):
 		os.remove (dbpathandname)
 	con = sqlite3.connect (dbpathandname)
-	con.execute ('CREATE TABLE SongsTable \
+	con.execute ("CREATE TABLE SongsTable \
 		(id INT PRIMARY KEY 	NOT NULL, \
 		mountpoint	TEXT 	NOT NULL, \
 		filefolder	TEXT 	NOT NULL, \
@@ -104,21 +121,25 @@ if __name__ == '__main__':
 		format		TEXT 	NOT NULL, \
 		fullpathfilename	TEXT 	NOT NULL,\
 		filegroupping TEXT 	NOT NULL, \
-		targetpath	TEXT 	NOT NULL)')
+		targetpath	TEXT 	NOT NULL, \
+		fileflag	TEXT 	NOT NULL DEFAULT ('file'))")
+
 	con.execute ('CREATE VIEW "SF" AS SELECT DISTINCT filefolder FROM songstable')
 	con.execute ('CREATE TABLE Associatedfiles \
 		(originfile	TEXT 	NOT NULL, \
 		targetpath	TEXT 	NOT NULL, \
 		fileflag	TEXT 	NOT NULL)')
-	con.execute ('CREATE VIEW "filemovements" AS SELECT * FROM (SELECT * FROM associatedfiles UNION SELECT fullpathfilename as originfile, targetpath, "file" as fileflag FROM songstable) ORDER BY originfile')
+	con.execute ('CREATE VIEW "filemovements" AS SELECT * FROM (SELECT * FROM associatedfiles UNION SELECT fullpathfilename as originfile, targetpath, fileflag FROM songstable) ORDER BY originfile')
 
 
-	# Open quodlibet dumped database 
+	# Open quodlibet dumped database, process it.
 	with open(userlibrary, 'r') as songsfile:
 		songs = cPickle.load(songsfile)
-		Id = 0	
+		Id = 0
+		processed_counter = 0
 		# iterate over duped elements
 		for element in songs:
+			processed_counter += 1
 
 			if element(userfilegrouppingtag) != '':
 				fullpathfilename = str.decode(str(element('~filename')),'utf8')
@@ -179,20 +200,22 @@ if __name__ == '__main__':
 					targetpath = targetpath + extension
 				targetpath = os.path.normpath (targetpath)
 				logging.debug ('\ttargetpath = {}'.format(targetpath))
-				valuetuple = ( 	Id,
+				valuetuple = ( 	processed_counter,
 								mountpoint,
 								filefolder,
 								filename,
 								str.decode(str(element('~format')),							'utf8'),
 								fullpathfilename,
 								filegroupping,
-								targetpath
+								targetpath,
+								'file'
 								)
-				con.execute ("INSERT INTO SongsTable VALUES (?,?,?,?,?,?,?,?)", valuetuple)
+				con.execute ("INSERT INTO SongsTable VALUES (?,?,?,?,?,?,?,?,?)", valuetuple)
 				Id += 1
 		con.commit()
 	
-	print '\t{} songs processed with <{}> defined.'.format(Id,userfilegrouppingtag)
+	print '\t{} total songs processed at quod-libet database.'.format(processed_counter)
+	print '\t{} songs with <{}> tag defined ({:.1%}).'.format(Id, userfilegrouppingtag, float(Id)/processed_counter)
 	### 
 	### Looking for Associated files and folders
 	###
@@ -263,6 +286,9 @@ if __name__ == '__main__':
 		logging.debug('\tassociated processed files: {}'.format(associated_counter))
 		logging.debug('\tNumber of associated target Paths: {}'.format (len(ATargetdict)))
 	con.commit ()
+
+	### Moving files and folders (Filemovements)
+	## Discarding files wich are at the same place. (originfile = destinationfile)
 
 
 
