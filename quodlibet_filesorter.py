@@ -110,6 +110,8 @@ if __name__ == '__main__':
 		(originfile	TEXT 	NOT NULL, \
 		targetpath	TEXT 	NOT NULL, \
 		fileflag	TEXT 	NOT NULL)')
+	con.execute ('CREATE VIEW "filemovements" AS SELECT * FROM (SELECT * FROM associatedfiles UNION SELECT fullpathfilename as originfile, targetpath, "file" as fileflag FROM songstable) ORDER BY originfile')
+
 
 	# Open quodlibet dumped database 
 	with open(userlibrary, 'r') as songsfile:
@@ -190,15 +192,18 @@ if __name__ == '__main__':
 				Id += 1
 		con.commit()
 	
-	print '\t{} songs processed.'.format(Id)
-	## Looking for Associated files and folders
+	print '\t{} songs processed with <{}> defined.'.format(Id,userfilegrouppingtag)
+	### 
+	### Looking for Associated files and folders
+	###
 	logging.debug ('#'*43)
 	logging.debug ('## Looking for Associated files and folders')
 	logging.debug ('#'*43)
+	print '\tLooking for associated files.'
 	cursor = con.cursor ()
 	cursor.execute ('SELECT * FROM sf')
 	for contaninerfolder in cursor:
-		originfolder = contaninerfolder[0]
+		originfolder = contaninerfolder[0]  # SELECT Query returns a tuple ([0],)
 		itemlist = os.listdir (originfolder)
 
 		ATargetdict = dict ()  # Associated target list, and number of leading coincidences.
@@ -209,18 +214,19 @@ if __name__ == '__main__':
 
 		for item in itemlist:
 			typeflag = None
-			originfile = os.path.join(originfolder,item)
-			logging.debug ('originfile = ' + originfile)
 			targetfile = None
+			originfile = os.path.join(originfolder,item)
+			logging.debug ('')
+			logging.debug ('originfile = ' + originfile)
 			if os.path.isfile (originfile):
 				exist, a_targetfile_path = con.execute ('SELECT COUNT (fullpathfilename), targetpath \
 								FROM songstable WHERE \
 								fullpathfilename = ?', (originfile,)).fetchone()
 				if exist:
-					logging.debug('\t > file is already a processed file.')
+					logging.debug('\t > file is a leading file.')
 					a_targetfolder_path = os.path.dirname(a_targetfile_path)
 					if a_targetfolder_path in ATargetdict:
-						ATargetdict[a_targetfolder_path] = ATargetdict[a_targetfolder_path] + 1
+						ATargetdict[a_targetfolder_path] += 1
 					else:
 						ATargetdict[a_targetfolder_path] = 1
 					leading_counter += 1
@@ -257,6 +263,7 @@ if __name__ == '__main__':
 		logging.debug('\tassociated processed files: {}'.format(associated_counter))
 		logging.debug('\tNumber of associated target Paths: {}'.format (len(ATargetdict)))
 	con.commit ()
+
 
 
 				
