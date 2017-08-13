@@ -90,6 +90,27 @@ class Getchunklist_test (unittest.TestCase):
 			result = TM.Getchunklist (example[0],example[1])
 			self.assertEqual (result, validate)
 
+class Nextfilenumber_test (unittest.TestCase):
+	""" test for Nextfilenumber function """
+	known_values = (
+		("file.jpg", "file(0).jpg"),
+		("file1.jpg", "file1(0).jpg"),
+		("file(0).jpg", "file(1).jpg"),
+		("file(222).jpg", "file(223).jpg"),
+		("file33", "file33(0)"),
+		("file(33)", "file(34)"),
+		("file(-1)", "file(-1)(0)"),
+		("file.","file(0)."),
+		("file(10).", "file(11)."),
+		("file(X).jpg", "file(X)(0).jpg"),
+		)
+	def test_known_input (self):
+		for inputfile, outputfile in self.known_values:
+			result = TM.Nextfilenumber (inputfile)
+			self.assertEqual (outputfile, result)
+	def test_mad_values (self):
+		self.assertRaises (TM.EmptyStringError, TM.Nextfilenumber, "")
+		pass
 
 
 if __name__ == '__main__':

@@ -2,15 +2,23 @@
 # -*- coding: utf_8 -*-
 
 import quodlibet, cPickle
-import sqlite3, re, os, logging
+import sqlite3, shutil, re, os, logging
 from datetime import datetime
 
-
-__version__ = 0.0
-
+__version__ = 0.1
 
 #=====================================
-# Function  myfunction
+# Custom Error Classes
+#=====================================
+class NotStringError(ValueError):
+	pass
+class MalformedPathError(ValueError):
+	pass
+class EmptyStringError(ValueError):
+	pass
+
+#=====================================
+# Functions
 #=====================================
 def Getchunklist (fgstring, delimitters):
 	'''Getchunklist
@@ -53,7 +61,7 @@ def CharChange (string):
 	charset = {
 				'/\a\b\f\r\v':'',
 				'\n\t':' ',
-				'|~':'-',
+				'|~%':'-',
 				}
 	for a in charset:
 		for i in a:
@@ -61,30 +69,102 @@ def CharChange (string):
 
 	return string
 
-def filemove (origin, dest):
-	if itemcheck (origin) != 'file':
+def itemcheck(pointer):
+	''' returns what kind of a pointer is '''
+	if not (type(pointer) is str or type(pointer) is unicode):
+		raise NotStringError ('Bad input, it must be a string')
+	if pointer.find("//") != -1 :
+		raise MalformedPathError ('Malformed Path, it has double slashes')
+	
+	if os.path.isfile(pointer):
+		return 'file'
+	if os.path.isdir(pointer):
+		return 'folder'
+	if os.path.islink(pointer):
+		return 'link'
+	return ""
+
+def Nextfilenumber (dest):
+	''' Returns the next filename counter as filename(nnn).ext
+	input: /path/to/filename.ext
+	output: /path/to/filename(n).ext
+		'''
+	if dest == "":
+		raise EmptyStringError ('empty strings as input are not allowed')
+	filename = os.path.basename (dest)
+	extension = os.path.splitext (dest)[1]
+	# extract secuence
+	expr = '\(\d{1,}\)'+extension
+	mo = re.search (expr, filename)
+	try:
+		grupo = mo.group()
+	except:
+		#  print ("No final counter expression was found in %s. Counter is set to 0" % dest)
+		counter = 0
+		cut = len (extension)
+	else:
+		#  print ("Filename has a final counter expression.  (n).extension ")
+		cut = len (mo.group())
+		countergroup = (re.search ('\d{1,}', grupo))
+		counter = int (countergroup.group()) + 1
+	if cut == 0 :
+		newfilename = os.path.join( os.path.dirname(dest), filename + "(" + str(counter) + ")" + extension)
+	else:
+		newfilename = os.path.join( os.path.dirname(dest), filename [0:-cut] + "(" + str(counter) + ")" + extension)
+	return newfilename
+
+def Filemove (origin, dest):
+	""" Moves files or folders,
+	it makes necessary directories,
+	moves folders and subfolders,
+	it gives a next secuencial number in case of an existing archive
+	it returns the moved path.
+
+	please do not use with symliks.
+	
+	___dependencies__:
+		itemcheck (pointer)
+		Nextfilenumber (dest)
+		dummy variable
+		"""
+
+	origin_is = itemcheck (origin)
+	if origin_is not in ('file','folder'):
+		logging.warning ('!! This should not be here, is a link !!')
 		return None
-	while itemcheck (dest) != "" :
-		infomsg = "File already exists at destination, assigning a new name."
+	while itemcheck (dest) != "":
 		dest = Nextfilenumber (dest)
-		logging.info (infomsg + " >> " + dest)
+		logging.info ("Object-file already exists at destination, assigning recursively a new name. >> {}".format(dest))
 
 	if not dummy:
-		if itemcheck (os.path.dirname(dest)) == '':
-			os.makedirs (os.path.dirname(dest))
+		if origin_is == 'file':
+			if itemcheck (os.path.dirname(dest)) == '':
+				os.makedirs (os.path.dirname(dest))
 		shutil.move (origin, dest)
-	#print ("      > file has been moved. {}".format(dummymsg))
-	logging.info ("\tfile has been moved. {}".format(dummymsg))
+	logging.debug ("\t{} has been moved. {}".format(origin_is,dummymsg))
 	return dest
 
 
-
+#=====================================
+# User config 
+#=====================================
 userlibrary = os.path.join(os.getenv('HOME'),'.quodlibet/songs')  # Place where the quod-libet cPickle object is
 userfilegrouppingtag = 'filegroupping'  # Tag name which defines the desired path structure for the file
 dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive for processing
-dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
+dummy = True  # Dummy mode, True means that the software will check items, but will not perform file movements
+# (not in use) # cpmode = 'move'  # 'copy' or 'move' for copy or move the processed files.
+
+#=====================================
+dummymsg = ''
+if dummy == True:
+	dummymsg = '(dummy mode)'
+	print ('\t(--- Running in dummy mode ---)')
 
 
+
+#=====================================
+# Main
+#=====================================
 if __name__ == '__main__':
 	print ('Running, have a good time.')
 
@@ -105,8 +185,7 @@ if __name__ == '__main__':
 		filename = logging_file,
 		filemode = 'w'  # a = add
 	)
-	print '\tLogging to: {}'.format(logging_file)
-	
+	print '\tLogging to: {}'.format(logging_file)	
 
 
 	#initializing DB
@@ -136,13 +215,14 @@ if __name__ == '__main__':
 					FROM songstable) \
 				WHERE originfile <> targetpath ORDER BY originfile')
 
-
-	# Open quodlibet dumped database, process it.
+	# Open quodlibet dumped database, processing it.
 	with open(userlibrary, 'r') as songsfile:
 		songs = cPickle.load(songsfile)
 		Id = 0
 		processed_counter = 0
-		# iterate over duped elements
+		###
+		### iterate over dumped elements, addressing Database
+		###
 		for element in songs:
 			processed_counter += 1
 
@@ -292,13 +372,21 @@ if __name__ == '__main__':
 		logging.debug('\tNumber of associated target Paths: {}'.format (len(ATargetdict)))
 	con.commit ()
 
-	### Moving files and folders (Filemovements)
+	###
+	### File operations
+	###
+	cursor.execute ('SELECT * FROM filemovements')
+	print '\tPerforming file operations.'
+	for origin, dest, fileflag in cursor:
+		logging.debug ('\t {}    from: {}'.format(fileflag,origin))
+		if itemcheck (origin) == '':
+			loggingmsg = '\t Warning, {} at {} does not exist. Skipping'.format(fileflag,origin)
+			print loggingmsg
+			logging.warning (loggingmsg)
+			continue
+		movedto = Filemove (origin, dest)
+		logging.debug ('\t file moved: {}'.format(dest))
+		logging.debug ('')
 
-
-
-				
-
-
-
-		
 	print 'Done!'
+
