@@ -282,6 +282,15 @@ if __name__ == '__main__':
 				# Adding a mountpoint lead if necessary
 				if targetpath.startswith ('~/'):
 					targetpath = mountpoint + targetpath [1:]
+				# Relative paths are mounted on current song's mount-point
+				elif not targetpath.startswith ('/'):
+					targetpath = mountpoint + targetpath
+				# Preserving original filename if could not constructo a valid one.
+				if targetpath.endswith('/') and not addfilenameflag:
+					targetpath = targetpath[:-1]
+					addfilenameflag = True
+					logging.info ('It was not possible construct a valid filename, I will preserve original filename.')
+
 				# Adding original filename if necessary
 				if addfilenameflag:
 					targetpath = targetpath + os.path.basename(fullpathfilename)
