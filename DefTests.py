@@ -12,6 +12,18 @@ import quodlibet_filesorter
 
 TM = quodlibet_filesorter
 
+class Pathnormalizer_test (unittest.TestCase):
+	""" Corrects erroneous paths.
+		"""
+	known_values = (
+		('//home///pablo/Musica//folder/song.mp3','/home/pablo/Musica/folder/song.mp3'),
+		)
+	def test_CharChange (self):
+		for example, validate in self.known_values:
+			result = TM.Pathnormalizer (example)
+			self.assertEqual (result, validate)
+
+
 class CharChange_test (unittest.TestCase):
 	"""Replaces character in a string with assigned values
 		"""

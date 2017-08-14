@@ -94,7 +94,7 @@ def Nextfilenumber (dest):
 	filename = os.path.basename (dest)
 	extension = os.path.splitext (dest)[1]
 	# extract secuence
-	expr = '\(\d{1,}\)'+extension
+	expr = '\(\d{1,}\)' + extension
 	mo = re.search (expr, filename)
 	try:
 		grupo = mo.group()
@@ -144,6 +144,11 @@ def Filemove (origin, dest):
 	logging.debug ("\t{} has been moved. {}".format(origin_is,dummymsg))
 	return dest
 
+def Pathnormalizer (path):
+	normpath = path
+	normpath = re.sub ('/+', '/', normpath)
+
+	return normpath
 
 #=====================================
 # User config 
@@ -156,9 +161,8 @@ dummy = True  # Dummy mode, True means that the software will check items, but w
 
 #=====================================
 dummymsg = ''
-if dummy == True:
+if dummy:
 	dummymsg = '(dummy mode)'
-	print ('\t(--- Running in dummy mode ---)')
 
 
 
@@ -166,7 +170,7 @@ if dummy == True:
 # Main
 #=====================================
 if __name__ == '__main__':
-	print ('Running, have a good time.')
+	print 'Running, have a good time. {}'.format(dummymsg)
 
 	loginlevel = 'DEBUG'  # INFO ,DEBUG
 	logpath = './'
