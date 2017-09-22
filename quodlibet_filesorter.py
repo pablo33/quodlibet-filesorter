@@ -415,8 +415,11 @@ if __name__ == '__main__':
 	# Reporting
 	T_associated_files = con.execute("SELECT COUNT () FROM filemovements WHERE fileflag = 'Afile'").fetchone()[0]
 	T_afolder_counter = con.execute("SELECT COUNT () FROM filemovements WHERE fileflag = 'Afolder'").fetchone()[0]
-	print '\t\t{} associated files found.'.format(T_associated_files)
-	print '\t\t{} associated folders found.'.format(T_afolder_counter)
+	pluralfi, pluralfo = 's','s'
+	if T_associated_files == 1: pluralfi = ''
+	if T_afolder_counter == 1: pluralfo = ''
+	print '\t\t{} associated file{} found.'.format(T_associated_files, pluralfi)
+	print '\t\t{} associated folder{} found.'.format(T_afolder_counter, pluralfo)
 
 	###
 	### File operations
