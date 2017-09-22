@@ -4,6 +4,7 @@
 import quodlibet, cPickle
 import sqlite3, shutil, re, os, logging
 from datetime import datetime
+from sys import stdout
 
 __version__ = 0.1
 
@@ -147,8 +148,34 @@ def Filemove (origin, dest):
 def Pathnormalizer (path):
 	normpath = path
 	normpath = re.sub ('/+', '/', normpath)
-
 	return normpath
+
+class Progresspercent:
+	''' Show the progression of an activity in percentage
+	it is swhon on the same line'''
+	def __init__ (self, maxValue, title = '', showpartial=True):
+		if title != '':
+			self.title = " {} :".format(title)  # Name of the 
+		else:
+			self.title = " "
+		self.maxValue = maxValue
+		self.partial = showpartial
+
+	def showprogress (self, p, valuetext = ""):
+		'''
+		Shows the progress in percentage vía stdout, and returns its value again.
+		'''
+		progresspercent = '{:.2%}'.format(float(p) / self.maxValue)
+		if self.partial == True:
+			progresspartial = '({:6}/{:<6})'.format(p,self.maxValue)
+		else:
+			progresspartial = ''
+		progresstext = "{}{}{}{}".format (self.title,valuetext, progresspartial, progresspercent)
+		stdout.write (progresstext + chr(8)*len(progresstext))
+		if p == self.maxValue:
+			stdout.write('\n')
+		stdout.flush()
+		return progresspercent
 
 #=====================================
 # User config 
@@ -384,14 +411,24 @@ if __name__ == '__main__':
 		logging.debug('\tassociated processed files: {}'.format(associated_counter))
 		logging.debug('\tNumber of associated target Paths: {}'.format (len(ATargetdict)))
 	con.commit ()
+	
+	# Reporting
+	T_associated_files = con.execute("SELECT COUNT () FROM filemovements WHERE fileflag = 'Afile'").fetchone()[0]
+	T_afolder_counter = con.execute("SELECT COUNT () FROM filemovements WHERE fileflag = 'Afolder'").fetchone()[0]
+	print '\t\t{} associated files found.'.format(T_associated_files)
+	print '\t\t{} associated folders found.'.format(T_afolder_counter)
 
 	###
 	### File operations
 	###
+	total = cursor.execute ('SELECT COUNT () FROM filemovements').fetchone()[0]
+	progressindicator = Progresspercent (total, title = '\tMoving files', showpartial=True)
+	counter = 1
 	cursor.execute ('SELECT * FROM filemovements')
 	print '\tPerforming file operations.'
 	for origin, dest, fileflag in cursor:
-		logging.debug ('\t {}    from: {}'.format(fileflag,origin))
+		progressindicator.showprogress (counter); counter += 1
+		logging.debug ('\t {}	from: {}'.format(fileflag,origin))
 		if itemcheck (origin) == '':
 			loggingmsg = '\t Warning, {} at {} does not exist. Skipping'.format(fileflag,origin)
 			print loggingmsg
