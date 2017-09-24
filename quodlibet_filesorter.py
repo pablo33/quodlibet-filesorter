@@ -21,6 +21,12 @@ class EmptyStringError(ValueError):
 #=====================================
 # Functions
 #=====================================
+def trimto (texto, widht):
+	textout = texto
+	if len (texto) > widht:
+		textout = "..." + texto [-47:]
+	return textout
+
 def Getchunklist (fgstring, delimitters):
 	'''Getchunklist
 
@@ -183,14 +189,14 @@ class Progresspercent:
 userlibrary = os.path.join(os.getenv('HOME'),'.quodlibet/songs')  # Place where the quod-libet cPickle object is
 userfilegrouppingtag = 'filegroupping'  # Tag name which defines the desired path structure for the file
 dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive for processing
-dummy = True  # Dummy mode, True means that the software will check items, but will not perform file movements
+dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
 # (not in use) # cpmode = 'move'  # 'copy' or 'move' for copy or move the processed files.
 
 #=====================================
 dummymsg = ''
 if dummy:
 	dummymsg = '(dummy mode)'
-
+	print '(Running in Dummy mode)'
 
 
 #=====================================
@@ -440,6 +446,24 @@ if __name__ == '__main__':
 		movedto = Filemove (origin, dest)
 		logging.debug ('\t file moved: {}'.format(dest))
 		logging.debug ('')
+	###
+	### Removing empty folders
+	###
+	print '\tRemoving empty folders.'
+	logging.info ('### Checking empty folders to delete them')
+	cursor = con.execute ('SELECT * FROM sf')
+	for i in cursor:
+		dir_item = i[0]
+		logging.info ('checking: {}'.format(dir_item))
+		if itemcheck(dir_item) != 'folder':
+			logging.warning ('\tDoes not exists or is not a folder. Skipping')
+			continue			
+		if len (os.listdir (dir_item)) == 0:
+			if not dummy:
+				shutil.rmtree (dir_item)
+				logging.info ('\tDeleted (was empty)')
+			print "\t\tempty folder removed: {} {}".format (trimto (dir_item,47) ,dummymsg)
+			logging.info ('Empty folder removed: {}'.format(dir_item))
 
 	print 'Done!'
 
