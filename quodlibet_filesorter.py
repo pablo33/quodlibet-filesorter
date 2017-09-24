@@ -196,7 +196,7 @@ dummy = False  # Dummy mode, True means that the software will check items, but 
 dummymsg = ''
 if dummy:
 	dummymsg = '(dummy mode)'
-	print '(Running in Dummy mode)'
+	print '** (Running in Dummy mode) **'
 
 
 #=====================================
@@ -294,15 +294,18 @@ if __name__ == '__main__':
 					logging.debug ('\ttaglist= {}'.format(taglist))
 					for tag in taglist:
 						metaname = tag[1:-1]
-						logging.debug ('\t\tmetaname = {}'.format(metaname))
 						metavalue = element(metaname)
 						# we trim the slash and total tracks if any
-						if metaname == 'tracknumber':
+						if metaname in ('tracknumber','discnumber') :
 							slashpos = metavalue.find('/')
 							if slashpos != -1:
 								metavalue = metavalue [:slashpos]
-							if metavalue.isnumeric():
+							if metavalue.isdigit():
 								metavalue = '{:0>2}'.format (metavalue)
+						if metavalue.endswith('[Unknown]'):
+							metavalue = ''
+						logging.debug ('\t\tmetaname = {}\tmetavalue = {}'.format(metaname,metavalue))
+
 						metavalue = CharChange (metavalue)  # clears some non allowed chars
 						formedchunk = formedchunk.replace('<'+ metaname + '>',metavalue)
 						# Break and return an empty chunk if any tag is not present
@@ -320,7 +323,7 @@ if __name__ == '__main__':
 					targetpath = mountpoint + targetpath
 				# Preserving original filename if could not constructo a valid one.
 				if targetpath.endswith('/') and not addfilenameflag:
-					targetpath = targetpath[:-1]
+					#targetpath = targetpath[:-1]
 					addfilenameflag = True
 					logging.info ('It was not possible construct a valid filename, I will preserve original filename.')
 
@@ -462,7 +465,7 @@ if __name__ == '__main__':
 			if not dummy:
 				shutil.rmtree (dir_item)
 				logging.info ('\tDeleted (was empty)')
-			print "\t\tempty folder removed: {} {}".format (trimto (dir_item,47) ,dummymsg)
+			print "\t\tempty folder removed: {} {}".format (trimto (dir_item,40) ,dummymsg)
 			logging.info ('Empty folder removed: {}'.format(dir_item))
 
 	print 'Done!'
