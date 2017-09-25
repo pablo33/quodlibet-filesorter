@@ -189,7 +189,7 @@ class Progresspercent:
 userlibrary = os.path.join(os.getenv('HOME'),'.quodlibet/songs')  # Place where the quod-libet cPickle object is
 userfilegrouppingtag = 'filegroupping'  # Tag name which defines the desired path structure for the file
 dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive for processing
-dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
+dummy = True  # Dummy mode, True means that the software will check items, but will not perform file movements
 # (not in use) # cpmode = 'move'  # 'copy' or 'move' for copy or move the processed files.
 
 #=====================================
@@ -241,6 +241,8 @@ if __name__ == '__main__':
 		fileflag	TEXT 	NOT NULL)" )
 
 	con.execute ('CREATE VIEW "SF" AS SELECT DISTINCT filefolder FROM songstable WHERE fullpathfilename <> targetpath')
+	con.execute ('CREATE VIEW "Allfolders" AS SELECT DISTINCT filefolder FROM songstable')
+
 	con.execute ('CREATE TABLE Associatedfiles \
 		(originfile	TEXT 	NOT NULL, \
 		targetpath	TEXT 	NOT NULL, \
@@ -393,8 +395,8 @@ if __name__ == '__main__':
 				typeflag = 'Afile'
 			elif os.path.isdir (originfile):
 				exist = con.execute ('SELECT COUNT (filefolder) \
-								FROM sf WHERE \
-								filefolder LIKE ?', (originfile+'%',)).fetchone()[0]
+								FROM Allfolders \
+								WHERE filefolder LIKE ?', (originfile+'%',)).fetchone()[0]
 				if exist:
 					logging.debug ('\tFolder has some songs to be processed, I will not move this folder: {}'.format(originfile))
 					continue
