@@ -141,7 +141,10 @@ def Filemove (origin, dest):
 		return None
 	while itemcheck (dest) != "":
 		dest = Nextfilenumber (dest)
-		logging.info ("Object-file already exists at destination, assigning recursively a new name. >> {}".format(dest))
+		logging.info ("\tObject-file already exists at destination, assigning recursively a new name. >> {}".format(dest))
+		if dest == origin:
+			logging.info ("\tFound itself while iterating a new name. The file remains.>> {}".format(dest))
+			return dest
 
 	if not dummy:
 		if origin_is == 'file':
@@ -189,7 +192,7 @@ class Progresspercent:
 userlibrary = os.path.join(os.getenv('HOME'),'.quodlibet/songs')  # Place where the quod-libet cPickle object is
 userfilegrouppingtag = 'filegroupping'  # Tag name which defines the desired path structure for the file
 dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive for processing
-dummy = True  # Dummy mode, True means that the software will check items, but will not perform file movements
+dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
 # (not in use) # cpmode = 'move'  # 'copy' or 'move' for copy or move the processed files.
 
 #=====================================
@@ -305,7 +308,7 @@ if __name__ == '__main__':
 							if metavalue.isdigit():
 								metavalue = '{:0>2}'.format (metavalue)
 						if metavalue.endswith('[Unknown]'):
-							metavalue = '[no title]'
+							metavalue = '[no <{}>]'.format(metaname)
 						logging.debug ('\t\tmetaname = {}\tmetavalue = {}'.format(metaname,metavalue))
 
 						metavalue = CharChange (metavalue)  # clears some non allowed chars
@@ -444,7 +447,7 @@ if __name__ == '__main__':
 		progressindicator.showprogress (counter); counter += 1
 		logging.debug ('\t {}	from: {}'.format(fileflag,origin))
 		if itemcheck (origin) == '':
-			loggingmsg = '\t Warning, {} at {} does not exist. Skipping'.format(fileflag,origin)
+			loggingmsg = '** Warning, {} at {} does not exist. Skipping'.format(fileflag,trimto(origin,20))
 			print loggingmsg
 			logging.warning (loggingmsg)
 			continue
