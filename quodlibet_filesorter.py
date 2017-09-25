@@ -240,7 +240,7 @@ if __name__ == '__main__':
 		targetpath	TEXT 	NOT NULL, \
 		fileflag	TEXT 	NOT NULL)" )
 
-	con.execute ('CREATE VIEW "SF" AS SELECT DISTINCT filefolder FROM songstable WHERE fullpathfilename <> targetpath')
+	con.execute ('CREATE VIEW "ScannedFolders" AS SELECT DISTINCT filefolder FROM songstable WHERE fullpathfilename <> targetpath')
 	con.execute ('CREATE VIEW "Allfolders" AS SELECT DISTINCT filefolder FROM songstable')
 
 	con.execute ('CREATE TABLE Associatedfiles \
@@ -360,7 +360,7 @@ if __name__ == '__main__':
 	logging.debug ('#'*43)
 	print '\tLooking for associated files.'
 	cursor = con.cursor ()
-	cursor.execute ('SELECT * FROM sf')
+	cursor.execute ('SELECT * FROM ScannedFolders')
 	for contaninerfolder in cursor:
 		originfolder = contaninerfolder[0]  # SELECT Query returns a tuple ([0],)
 		itemlist = os.listdir (originfolder)
@@ -456,7 +456,7 @@ if __name__ == '__main__':
 	###
 	print '\tRemoving empty folders.'
 	logging.info ('### Checking empty folders to delete them')
-	cursor = con.execute ('SELECT * FROM sf')
+	cursor = con.execute ('SELECT * FROM ScannedFolders')
 	for i in cursor:
 		dir_item = i[0]
 		logging.info ('checking: {}'.format(dir_item))
