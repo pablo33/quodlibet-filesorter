@@ -240,7 +240,7 @@ if __name__ == '__main__':
 		targetpath	TEXT 	NOT NULL, \
 		fileflag	TEXT 	NOT NULL)" )
 
-	con.execute ('CREATE VIEW "SF" AS SELECT DISTINCT filefolder FROM songstable')
+	con.execute ('CREATE VIEW "SF" AS SELECT DISTINCT filefolder FROM songstable WHERE fullpathfilename <> targetpath')
 	con.execute ('CREATE TABLE Associatedfiles \
 		(originfile	TEXT 	NOT NULL, \
 		targetpath	TEXT 	NOT NULL, \
@@ -303,7 +303,7 @@ if __name__ == '__main__':
 							if metavalue.isdigit():
 								metavalue = '{:0>2}'.format (metavalue)
 						if metavalue.endswith('[Unknown]'):
-							metavalue = ''
+							metavalue = '[no title]'
 						logging.debug ('\t\tmetaname = {}\tmetavalue = {}'.format(metaname,metavalue))
 
 						metavalue = CharChange (metavalue)  # clears some non allowed chars
