@@ -239,6 +239,7 @@ if itemcheck (qlcfgfile) != 'file':
 	exit ('  Error: No Quod-libet config found: {}'.format (qlcfgfile))
 else:
 	print '  Quod-libet config file found.'
+
 scanline = fetchtagline (qlcfgfile,'scan','=')
 librarypaths = getmetasep (scanline,':')
 
@@ -416,6 +417,10 @@ if __name__ == '__main__':
 	cursor.execute ('SELECT * FROM ScannedFolders')
 	for contaninerfolder in cursor:
 		originfolder = contaninerfolder[0]  # SELECT Query returns a tuple ([0],)
+		if itemcheck (originfolder) != 'folder':
+			logging.warning('Folder is not present, Skipping!: {}'.format(originfolder))
+			continue
+
 		itemlist = os.listdir (originfolder)
 
 		ATargetdict = dict ()  # Associated target list, and number of leading coincidences.
