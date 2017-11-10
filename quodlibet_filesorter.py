@@ -186,16 +186,62 @@ class Progresspercent:
 		stdout.flush()
 		return progresspercent
 
+def fetchtagline (textfile,tag,sep):
+	'''Opens a textfile and fetch a value when the tag and sep is encountered
+
+		'''
+	with open (textfile,'r') as f:
+		for line in f:
+			if line.startswith(tag):
+				pos = line.find(sep)
+				if pos > 0:
+					value = line[pos+1:].strip()
+					break
+	return value
+
+def getmetasep (scanline,sep):
+	scanline = scanline
+	chunklist = list()
+	chunk = ''
+	rpos = 0
+	while rpos < len (scanline):
+		esc = False
+		if scanline [rpos] == '\\':
+			if rpos+1 < len (scanline):
+				rpos += 1
+				esc = True
+		addchar = scanline [rpos]
+		chunk = chunk + addchar
+		if not esc and addchar == sep:
+			chunklist.append(chunk[:-1])
+			chunk = ''
+		if rpos+1 == len(scanline):
+			chunklist.append(chunk)
+		rpos += 1
+	return chunklist
+
+
 #=====================================
 # User config 
 #=====================================
-userlibrary = os.path.join(os.getenv('HOME'),'.quodlibet/songs')  # Place where the quod-libet cPickle object is
 userfilegrouppingtag = 'filegroupping'  # Tag name which defines the desired path structure for the file
+
+qluserfolder  = os.path.join (os.getenv('HOME'),'.quodlibet') 
+qlcPicklefile = os.path.join (qluserfolder,		'songs')  # Place where the quod-libet cPickle object is
+qlcfgfile     = os.path.join (qluserfolder,		'config')
+
 dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive for processing
 dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
 # (not in use) # cpmode = 'move'  # 'copy' or 'move' for copy or move the processed files.
 
-#=====================================
+#========== Fetch library paths ==========
+if itemcheck (qlcfgfile) != 'file':
+	exit ('  Error: No Quod-libet config found: {}'.format (qlcfgfile))
+else:
+	print '  Quod-libet config file found.'
+scanline = fetchtagline (qlcfgfile,'scan','=')
+librarypaths = getmetasep (scanline,':')
+
 dummymsg = ''
 if dummy:
 	dummymsg = '(dummy mode)'
@@ -208,7 +254,7 @@ if dummy:
 if __name__ == '__main__':
 	print 'Running, have a good time. {}'.format(dummymsg)
 
-	loginlevel = 'DEBUG'  # INFO ,DEBUG
+	loginlevel = 'INFO'  # INFO ,DEBUG
 	logpath = './'
 	logging_file = os.path.join(logpath, userfilegrouppingtag+'.log')
 
@@ -258,7 +304,7 @@ if __name__ == '__main__':
 				WHERE originfile <> targetpath ORDER BY originfile')
 
 	# Open quodlibet dumped database, processing it.
-	with open(userlibrary, 'r') as songsfile:
+	with open(qlcPicklefile, 'r') as songsfile:
 		songs = cPickle.load(songsfile)
 		Id = 0
 		processed_counter = 0
@@ -270,7 +316,11 @@ if __name__ == '__main__':
 
 			if element(userfilegrouppingtag) != '':
 				fullpathfilename = str.decode(str(element('~filename')),'utf8')
-				mountpoint = str.decode(str(element('~mountpoint')),'utf8')
+				#mountpoint = str.decode(str(element('~mountpoint')),'utf8')
+				for mp in librarypaths:
+					if fullpathfilename.startswith (mp):
+						mountpoint = mp
+						break
 				filefolder = os.path.dirname(fullpathfilename)
 				filename = os.path.basename(fullpathfilename)
 				extension = os.path.splitext (fullpathfilename)[1]
