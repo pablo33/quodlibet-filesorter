@@ -21,6 +21,16 @@ class EmptyStringError(ValueError):
 #=====================================
 # Functions
 #=====================================
+def NoTAlloChReplace (myfilename):
+	''' This function gets a string and replace a set of characters by a underscore.
+	It is intended to clean filenames and add compatibility with Windows and OSx file systems
+		'''
+	chars = '\:*?"<>|'
+	for i in chars:
+		myfilename = myfilename.replace(i, '_')
+	return myfilename
+
+
 def trimto (texto, widht):
 	textout = texto
 	if len (texto) > widht:
@@ -164,7 +174,7 @@ class Progresspercent:
 	it is swhon on the same line'''
 	def __init__ (self, maxValue, title = '', showpartial=True):
 		if title != '':
-			self.title = " {} :".format(title)  # Name of the 
+			self.title = " {} ".format(title)  # Name of the 
 		else:
 			self.title = " "
 		self.maxValue = maxValue
@@ -238,7 +248,7 @@ dummy = False  # Dummy mode, True means that the software will check items, but 
 if itemcheck (qlcfgfile) != 'file':
 	exit ('  Error: No Quod-libet config found: {}'.format (qlcfgfile))
 else:
-	print '  Quod-libet config file found.'
+	print ('  Quod-libet config file found.')
 
 scanline = fetchtagline (qlcfgfile,'scan','=')
 librarypaths = getmetasep (scanline,':')
@@ -246,14 +256,14 @@ librarypaths = getmetasep (scanline,':')
 dummymsg = ''
 if dummy:
 	dummymsg = '(dummy mode)'
-	print '** (Running in Dummy mode) **'
+	print ('** (Running in Dummy mode) **')
 
 
 #=====================================
 # Main
 #=====================================
 if __name__ == '__main__':
-	print 'Running, have a good time. {}'.format(dummymsg)
+	print ('Running, have a good time. {}'.format(dummymsg))
 
 	loginlevel = 'INFO'  # INFO ,DEBUG
 	logpath = './'
@@ -389,6 +399,7 @@ if __name__ == '__main__':
 				else:
 					targetpath = targetpath + extension
 				targetpath = os.path.normpath (targetpath)
+				targetpath = NoTAlloChReplace (targetpath)
 				logging.debug ('\ttargetpath = {}'.format(targetpath))
 				valuetuple = ( 	processed_counter,
 								mountpoint,
@@ -493,10 +504,10 @@ if __name__ == '__main__':
 	###
 	### File operations
 	###
-	total = cursor.execute ('SELECT COUNT () FROM filemovements').fetchone()[0]
+	total = cursor.execute ("SELECT COUNT () FROM filemovements where originfile not like '%/.Trash-%'").fetchone()[0]
 	progressindicator = Progresspercent (total, title = '\tMoving files', showpartial=True)
 	counter = 1
-	cursor.execute ('SELECT * FROM filemovements')
+	cursor.execute ("SELECT * FROM filemovements WHERE originfile NOT LIKE '%/.Trash-%'")
 	print '\tPerforming file operations.'
 	for origin, dest, fileflag in cursor:
 		progressindicator.showprogress (counter); counter += 1
