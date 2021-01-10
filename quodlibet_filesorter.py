@@ -1,12 +1,14 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 # -*- coding: utf_8 -*-
 
-import quodlibet, cPickle
-import sqlite3, shutil, re, os, logging
+import sqlite3
+import shutil, re, os, logging
 from datetime import datetime
+from glob import glob
 from sys import stdout
+from readtag import get_id3Tag		# local library
 
-__version__ = 0.1
+__version__ = "2.0.0"
 
 #=====================================
 # Custom Error Classes
@@ -29,7 +31,6 @@ def NoTAlloChReplace (myfilename):
 	for i in chars:
 		myfilename = myfilename.replace(i, '_')
 	return myfilename
-
 
 def trimto (texto, widht):
 	textout = texto
@@ -230,6 +231,41 @@ def getmetasep (scanline,sep):
 		rpos += 1
 	return chunklist
 
+def addchilddirectory(directorio):
+	""" Returns a list of child directories
+
+	Usage: addchilddirectory(directory with absolute path)"""
+	addeddirs = []
+	ficheros = os.listdir(directorio)
+	for a in ficheros:
+		item = os.path.join(directorio, a)
+		if os.path.isdir(item):
+			addeddirs.append(item)
+	return addeddirs
+
+def lsdirectorytree( directory = os.getenv( 'HOME')):
+	""" Returns a list of a directory and its child directories
+
+	usage:
+	lsdirectorytree ("start directory")
+	By default, user's home directory
+
+	Own start directory is also returned as result
+	"""
+	#init list to start, own start directory is included
+	dirlist = [directory]
+	#setting the first scan
+	moredirectories = dirlist
+	while len (moredirectories) != 0:
+		newdirectories = moredirectories
+		moredirectories = list ()
+		for element in newdirectories:
+			toadd = addchilddirectory(element)
+			moredirectories += toadd
+		dirlist += moredirectories
+	return dirlist
+
+
 
 #=====================================
 # User config 
@@ -237,19 +273,13 @@ def getmetasep (scanline,sep):
 userfilegrouppingtag = 'filegroupping'  # Tag name which defines the desired path structure for the file
 
 qluserfolder  = os.path.join (os.getenv('HOME'),'.quodlibet') 
-qlcPicklefile = os.path.join (qluserfolder,		'songs')  # Place where the quod-libet cPickle object is
 qlcfgfile     = os.path.join (qluserfolder,		'config')
+filepaths = [os.path.join(os.getenv('HOME'),'Music'), ]		# List of initial paths to search.
 
 dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive for processing
-dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
-# (not in use) # cpmode = 'move'  # 'copy' or 'move' for copy or move the processed files.
+dummy = True  # Dummy mode, True means that the software will check items, but will not perform file movements
 
 #========== Fetch library paths ==========
-if itemcheck (qlcfgfile) != 'file':
-	exit ('  Error: No Quod-libet config found: {}'.format (qlcfgfile))
-else:
-	print ('  Quod-libet config file found.')
-
 scanline = fetchtagline (qlcfgfile,'scan','=')
 librarypaths = getmetasep (scanline,':')
 
@@ -257,6 +287,7 @@ dummymsg = ''
 if dummy:
 	dummymsg = '(dummy mode)'
 	print ('** (Running in Dummy mode) **')
+print ('Folders to read:', librarypaths)
 
 
 #=====================================
@@ -275,14 +306,14 @@ if __name__ == '__main__':
 	today = "/".join([str(now.day), str(now.month), str(now.year)])
 	tohour = ":".join([str(now.hour), str(now.minute)])
 
-	print '\tLoginlevel: {}'.format(loginlevel)
+	print ('\tLoginlevel: {}'.format(loginlevel))
 	logging.basicConfig(
 		level = loginlevel,
 		format = '%(asctime)s : %(levelname)s : %(message)s',
 		filename = logging_file,
 		filemode = 'w'  # a = add
-	)
-	print '\tLogging to: {}'.format(logging_file)	
+		)
+	print ('\tLogging to: {}'.format(logging_file))
 
 
 	#initializing DB
@@ -314,116 +345,120 @@ if __name__ == '__main__':
 					FROM songstable) \
 				WHERE originfile <> targetpath ORDER BY originfile')
 
-	# Open quodlibet dumped database, processing it.
-	with open(qlcPicklefile, 'r') as songsfile:
-		songs = cPickle.load(songsfile)
-		Id = 0
-		processed_counter = 0
-		###
-		### iterate over dumped elements, addressing Database
-		###
-		for element in songs:
-			processed_counter += 1
+	print ('\tScanning librarypaths for mp3 files')
+	# Iterating over scanned paths
+	for scanpath in librarypaths:
+		Id, processed_counter = 0, 0
+		### iterate over mp3 files. addressing Database
+		listree = lsdirectorytree (scanpath)
+		progressindicator = Progresspercent (len(listree), title = '\tScanning for files', showpartial=True)
+		for d in listree:
+			itemlist = list()
+			itemlist += glob(os.path.join(d,'*.mp3'))
+			itemlist += glob(os.path.join(d,'*.MP3'))
+			itemlist += glob(os.path.join(d,'*.Mp3'))
+			if len (itemlist) > 0:
+				for f in itemlist:
+					fullpathfilename = os.path.join (d,f)
+					audiofile = get_id3Tag (fullpathfilename)
+					tagvalue = audiofile.readtag (userfilegrouppingtag)
 
-			if element(userfilegrouppingtag) != '':
-				fullpathfilename = str.decode(str(element('~filename')),'utf8')
-				#mountpoint = str.decode(str(element('~mountpoint')),'utf8')
-				for mp in librarypaths:
-					if fullpathfilename.startswith (mp):
-						mountpoint = mp
-						break
-				filefolder = os.path.dirname(fullpathfilename)
-				filename = os.path.basename(fullpathfilename)
-				extension = os.path.splitext (fullpathfilename)[1]
-				filegroupping = str.decode(str(element(userfilegrouppingtag)),'utf8')
+					if tagvalue != None:
+						#fullpathfilename = audiofilepath  ## Deleteme
+						mountpoint = scanpath
+						filefolder = d
+						filename = f
+						extension = os.path.splitext (fullpathfilename)[1]
+						filegroupping = tagvalue
 
-				if filegroupping.endswith ('.<ext>'):
-					addfilenameflag = False
-					tmpfilegroupping = filegroupping [:-6]
-				else:
-					addfilenameflag = True
-				#Splicing filegrouppingtag in chunks
-				chunklist = Getchunklist (tmpfilegroupping,'[]')
-				
-				logging.debug ('>>>>')
-				logging.debug ('Chunklist = {}'.format(chunklist))
-				targetpath = ''
-				for chunk in chunklist:
-					# Checking and flagging an optional chunk
-					optionalflag = False
-					if chunk.startswith ('[') and chunk.endswith (']'):
-						optionalflag = True
-					# We start with the chunk, and later perform tag substitutions
-					formedchunk = chunk
-					taglist = re.findall ('<\w*>',chunk)
-					logging.debug ('\tchunk  = {}'.format(chunk))
-					logging.debug ('\ttaglist= {}'.format(taglist))
-					for tag in taglist:
-						metaname = tag[1:-1]
-						metavalue = element(metaname)
-						# we trim the slash and total tracks if any
-						if metaname in ('tracknumber','discnumber') :
-							slashpos = metavalue.find('/')
-							if slashpos != -1:
-								metavalue = metavalue [:slashpos]
-							if metavalue.isdigit():
-								metavalue = '{:0>2}'.format (metavalue)
-						if metavalue.endswith('[Unknown]'):
-							metavalue = '[no <{}>]'.format(metaname)
-						logging.debug ('\t\tmetaname = {}\tmetavalue = {}'.format(metaname,metavalue))
+						if filegroupping.endswith ('.<ext>'):
+							addfilenameflag = False
+							tmpfilegroupping = filegroupping [:-6]
+						else:
+							addfilenameflag = True
+						#Splicing filegrouppingtag in chunks
+						chunklist = Getchunklist (tmpfilegroupping,'[]')
+						
+						logging.debug ('>>>>')
+						logging.debug ('Chunklist = {}'.format(chunklist))
+						targetpath = ''
+						for chunk in chunklist:
+							# Checking and flagging an optional chunk
+							optionalflag = False
+							if chunk.startswith ('[') and chunk.endswith (']'):
+								optionalflag = True
+							# We start with the chunk, and later perform tag substitutions
+							formedchunk = chunk
+							taglist = re.findall ('<\w*>',chunk)
+							logging.debug ('\tchunk  = {}'.format(chunk))
+							logging.debug ('\ttaglist= {}'.format(taglist))
+							for tag in taglist:
+								metaname = tag[1:-1]
+								metavalue = audiofile.readtag (metaname)
+								# we trim the slash and total tracks if any
+								if metaname in ('tracknumber','discnumber') :
+									slashpos = metavalue.find('/')
+									if slashpos != -1:
+										metavalue = metavalue [:slashpos]
+									if metavalue.isdigit():
+										metavalue = '{:0>2}'.format (metavalue)
+								if metavalue.endswith('[Unknown]'):
+									metavalue = '[no <{}>]'.format(metaname)
+								logging.debug ('\t\tmetaname = {}\tmetavalue = {}'.format(metaname,metavalue))
 
-						metavalue = CharChange (metavalue)  # clears some non allowed chars
-						formedchunk = formedchunk.replace('<'+ metaname + '>',metavalue)
-						# Break and return an empty chunk if any tag is not present
-						if metaname not in element.keys() and optionalflag:
-							formedchunk = ''
-							break
-					if optionalflag and formedchunk != '':
-						formedchunk = formedchunk [1:-1]
-					targetpath = targetpath + formedchunk
-				# Adding a mountpoint lead if necessary
-				if targetpath.startswith ('~/'):
-					targetpath = mountpoint + targetpath [1:]
-				# Relative paths are mounted on current song's mount-point
-				elif not targetpath.startswith ('/'):
-					targetpath = mountpoint + targetpath
-				# Preserving original filename if could not constructo a valid one.
-				if targetpath.endswith('/') and not addfilenameflag:
-					#targetpath = targetpath[:-1]
-					addfilenameflag = True
-					logging.info ('It was not possible construct a valid filename, I will preserve original filename.')
+								metavalue = CharChange (metavalue)  # clears some non allowed chars
+								formedchunk = formedchunk.replace('<'+ metaname + '>',metavalue)
+								# Break and return an empty chunk if any tag is not present
+								if metaname not in audiofile.keys() and optionalflag: 
+									formedchunk = ''
+									break
+							if optionalflag and formedchunk != '':
+								formedchunk = formedchunk [1:-1]
+							targetpath = targetpath + formedchunk
+						# Adding a mountpoint lead if necessary
+						if targetpath.startswith ('~/'):
+							targetpath = mountpoint + targetpath [1:]
+						# Relative paths are mounted on current song's mount-point
+						elif not targetpath.startswith ('/'):
+							targetpath = mountpoint + targetpath
+						# Preserving original filename if could not constructo a valid one.
+						if targetpath.endswith('/') and not addfilenameflag:
+							#targetpath = targetpath[:-1]
+							addfilenameflag = True
+							logging.info ('It was not possible construct a valid filename, I will preserve original filename.')
 
-				# Adding original filename if necessary
-				if addfilenameflag:
-					targetpath = targetpath + os.path.basename(fullpathfilename)
-				else:
-					targetpath = targetpath + extension
-				targetpath = os.path.normpath (targetpath)
-				targetpath = NoTAlloChReplace (targetpath)
-				logging.debug ('\ttargetpath = {}'.format(targetpath))
-				valuetuple = ( 	processed_counter,
-								mountpoint,
-								filefolder,
-								filename,
-								str.decode(str(element('~format')),							'utf8'),
-								fullpathfilename,
-								filegroupping,
-								targetpath,
-								'Qfile'
-								)
-				con.execute ("INSERT INTO SongsTable VALUES (?,?,?,?,?,?,?,?,?)", valuetuple)
-				Id += 1
+						# Adding original filename if necessary
+						if addfilenameflag:
+							targetpath = targetpath + os.path.basename(fullpathfilename)
+						else:
+							targetpath = targetpath + extension
+						targetpath = os.path.normpath (targetpath)
+						targetpath = NoTAlloChReplace (targetpath)
+						logging.debug ('\ttargetpath = {}'.format(targetpath))
+						valuetuple = ( 	processed_counter,
+										mountpoint,
+										filefolder,
+										filename,
+										extension[1:],
+										fullpathfilename,
+										filegroupping,
+										targetpath,
+										'Qfile'
+										)
+						con.execute ("INSERT INTO SongsTable VALUES (?,?,?,?,?,?,?,?,?)", valuetuple)
+						Id += 1
+					progressindicator.showprogress (processed_counter); processed_counter += 1
 		con.commit()
 	
-	print '\t{} total songs processed at quod-libet database.'.format(processed_counter)
-	print '\t{} songs with <{}> tag defined ({:.1%}).'.format(Id, userfilegrouppingtag, float(Id)/processed_counter)
+	print ('\t{} total songs fetched from librarypaths.'.format(processed_counter))
+	print ('\t{} songs with <{}> tag defined ({:.1%}).'.format(Id, userfilegrouppingtag, float(Id)/processed_counter))
 	### 
 	### Looking for Associated files and folders
 	###
 	logging.debug ('#'*43)
 	logging.debug ('## Looking for Associated files and folders')
 	logging.debug ('#'*43)
-	print '\tLooking for associated files.'
+	print ('\tLooking for associated files.')
 	cursor = con.cursor ()
 	cursor.execute ('SELECT * FROM ScannedFolders')
 	for contaninerfolder in cursor:
@@ -498,8 +533,8 @@ if __name__ == '__main__':
 	pluralfi, pluralfo = 's','s'
 	if T_associated_files == 1: pluralfi = ''
 	if T_afolder_counter == 1: pluralfo = ''
-	print '\t\t{} associated file{} found.'.format(T_associated_files, pluralfi)
-	print '\t\t{} associated folder{} found.'.format(T_afolder_counter, pluralfo)
+	print ('\t\t{} associated file{} found.'.format(T_associated_files, pluralfi))
+	print ('\t\t{} associated folder{} found.'.format(T_afolder_counter, pluralfo))
 
 	###
 	### File operations
@@ -508,13 +543,13 @@ if __name__ == '__main__':
 	progressindicator = Progresspercent (total, title = '\tMoving files', showpartial=True)
 	counter = 1
 	cursor.execute ("SELECT * FROM filemovements WHERE originfile NOT LIKE '%/.Trash-%'")
-	print '\tPerforming file operations.'
+	print ('\tPerforming file operations.')
 	for origin, dest, fileflag in cursor:
 		progressindicator.showprogress (counter); counter += 1
 		logging.debug ('\t {}	from: {}'.format(fileflag,origin))
 		if itemcheck (origin) == '':
 			loggingmsg = '** Warning, {} at {} does not exist. Skipping'.format(fileflag,trimto(origin,20))
-			print loggingmsg
+			print (loggingmsg)
 			logging.warning (loggingmsg)
 			continue
 		movedto = Filemove (origin, dest)
@@ -523,7 +558,7 @@ if __name__ == '__main__':
 	###
 	### Removing empty folders
 	###
-	print '\tRemoving empty folders.'
+	print ('\tRemoving empty folders.')
 	logging.info ('### Checking empty folders to delete them')
 	cursor = con.execute ('SELECT * FROM ScannedFolders')
 	for i in cursor:
@@ -536,8 +571,8 @@ if __name__ == '__main__':
 			if not dummy:
 				shutil.rmtree (dir_item)
 				logging.info ('\tDeleted (was empty)')
-			print "\t\tempty folder removed: {} {}".format (trimto (dir_item,40) ,dummymsg)
+			print ("\t\tempty folder removed: {} {}".format (trimto (dir_item,40) ,dummymsg))
 			logging.info ('Empty folder removed: {}'.format(dir_item))
 
-	print 'Done!'
+	print ('Done!')
 
