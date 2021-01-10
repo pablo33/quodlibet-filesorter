@@ -64,8 +64,8 @@ https://id3.org/id3v2.4.0-frames
 "TOPE" : "original atist",			#"Original artist(s)/performer(s)"
 "TOWN" : "file owner",				#"File owner/licensee"
 "TPE1" : "artist",					#"Lead performer(s)/Soloist(s)",
-"TPE2" : "band",					#"Band/orchestra/accompaniment",
-"TPE3" : "performer", 				#"Conductor/performer refinement",
+"TPE2" : "performer",					#"Band/orchestra/accompaniment",
+"TPE3" : "band", 					#"Conductor/performer refinement",
 "TPE4" : "Interpreted, remixed, or otherwise modified by",
 "TPOS" : "discnumber",				#"Part of a set",
 "TPRO" : "Produced notice",
@@ -78,7 +78,7 @@ https://id3.org/id3v2.4.0-frames
 "TSOT" : "Title sort order",
 "TSRC" : "ISRC (international standard recording code)",
 "TSSE" : "Software/Hardware and settings used for encoding",
-"TSST" : "Set subtitle",
+"TSST" : "discsubtitle",	#"Set subtitle",
 "TXXX" : "User defined text information frame",
 "UFID" : "Unique file identifier",
 "USER" : "Terms of use",
@@ -94,6 +94,9 @@ https://id3.org/id3v2.4.0-frames
 "WXXX" : "User defined URL link frame",
 # """ Extras  """
 "TCMP" : "compilation",
+"XRVA" : "Relative volume adjustment",
+"NCON" : "NCON",
+"RGAD" : "RGAD",
 }
 
 
@@ -102,6 +105,21 @@ notusable = [
 'APIC',
 'POPM',
 'COMM',
+'RVA2',
+'XRVA',
+'PRIV',
+'WXXX',
+'GEOB',
+'MCDI',
+'PCNT',
+'UFID',
+'WOAF',
+'WCOP',
+'USER',
+
+'NCON',
+'RGAD',
+
 	]
 
 class get_id3Tag:
@@ -120,10 +138,15 @@ class get_id3Tag:
 			value	 = ''
 		
 			if keyframe == 'TXXX':
-				mo = re.search ('\\x03QuodLibet::(?P<tag>.+)\\x00(?P<value>.+)\\x00', a.data.decode())
-				if mo != None:
-					key   = mo.group ('tag')
-					value = mo.group ('value')
+				try:
+					mo = re.search ('\\x03(?P<tag>.+)\\x00(?P<value>.+)\\x00', a.data.decode())
+					if mo != None:
+						key   = mo.group ('tag')
+						value = mo.group ('value')
+						if key.startswith ('QuodLibet::'):
+							key = key [11:]
+				except UnicodeDecodeError:
+					value = ''
 
 			elif keyframe == 'APIC':
 				value = 'Has picture'
@@ -146,7 +169,11 @@ class get_id3Tag:
 						print ('Song:', filemp3)
 						print ('Frame', keyframe)
 						value = 'UnicodeDecodeError'
-						
+					except:
+						value = 'unavailable'
+				value = value.replace ('\x00', ', ')	# For frames with multiple texts in data
+	
+			value = value.strip()
 			self.keysdict [key] = value
 
 	def readtag (self, key):

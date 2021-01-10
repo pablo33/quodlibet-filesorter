@@ -93,9 +93,14 @@ def itemcheck(pointer):
 		raise NotStringError ('Bad input, it must be a string')
 	if pointer.find("//") != -1 :
 		raise MalformedPathError ('Malformed Path, it has double slashes')
-	
-	if os.path.isfile(pointer):
-		return 'file'
+	try:
+		if os.path.isfile(pointer):
+			return 'file'
+	except ValueError:
+		print ('ValueError: embedded null byte')
+		print ('file:', pointer)
+		exit()
+
 	if os.path.isdir(pointer):
 		return 'folder'
 	if os.path.islink(pointer):
@@ -277,7 +282,7 @@ qlcfgfile     = os.path.join (qluserfolder,		'config')
 filepaths = [os.path.join(os.getenv('HOME'),'Music'), ]		# List of initial paths to search.
 
 dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive for processing
-dummy = True  # Dummy mode, True means that the software will check items, but will not perform file movements
+dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
 
 #========== Fetch library paths ==========
 scanline = fetchtagline (qlcfgfile,'scan','=')
@@ -351,7 +356,8 @@ if __name__ == '__main__':
 		Id, processed_counter = 0, 0
 		### iterate over mp3 files. addressing Database
 		listree = lsdirectorytree (scanpath)
-		progressindicator = Progresspercent (len(listree), title = '\tScanning for files', showpartial=True)
+		progressindicator = Progresspercent (len(listree), title = '\tScanning for files in directories', showpartial=True)
+		folders_counter = 0
 		for d in listree:
 			itemlist = list()
 			itemlist += glob(os.path.join(d,'*.mp3'))
@@ -364,7 +370,7 @@ if __name__ == '__main__':
 					tagvalue = audiofile.readtag (userfilegrouppingtag)
 
 					if tagvalue != None:
-						#fullpathfilename = audiofilepath  ## Deleteme
+						processed_counter += 1
 						mountpoint = scanpath
 						filefolder = d
 						filename = f
@@ -447,7 +453,7 @@ if __name__ == '__main__':
 										)
 						con.execute ("INSERT INTO SongsTable VALUES (?,?,?,?,?,?,?,?,?)", valuetuple)
 						Id += 1
-					progressindicator.showprogress (processed_counter); processed_counter += 1
+			progressindicator.showprogress (folders_counter); folders_counter += 1
 		con.commit()
 	
 	print ('\t{} total songs fetched from librarypaths.'.format(processed_counter))
