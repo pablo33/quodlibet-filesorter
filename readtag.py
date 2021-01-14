@@ -78,7 +78,7 @@ https://id3.org/id3v2.4.0-frames
 "TSOT" : "Title sort order",
 "TSRC" : "ISRC (international standard recording code)",
 "TSSE" : "Software/Hardware and settings used for encoding",
-"TSST" : "discsubtitle",	#"Set subtitle",
+"TSST" : "discsubtitle",			#"Set subtitle",
 "TXXX" : "User defined text information frame",
 "UFID" : "Unique file identifier",
 "USER" : "Terms of use",

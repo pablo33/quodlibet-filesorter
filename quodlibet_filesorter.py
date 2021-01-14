@@ -279,7 +279,7 @@ userfilegrouppingtag = 'filegroupping'  # Tag name which defines the desired pat
 
 qluserfolder  = os.path.join (os.getenv('HOME'),'.quodlibet') 
 qlcfgfile     = os.path.join (qluserfolder,		'config')
-filepaths = [os.path.join(os.getenv('HOME'),'Music'), ]		# List of initial paths to search.
+#filepaths = [os.path.join(os.getenv('HOME'),'Music'), ]		# List of initial paths to search.
 
 dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive for processing
 dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
@@ -359,6 +359,8 @@ if __name__ == '__main__':
 		progressindicator = Progresspercent (len(listree), title = '\tScanning for files in directories', showpartial=True)
 		folders_counter = 0
 		for d in listree:
+			if "/.Trash-1000/" in d:	#is a trash folder, ignoring
+				continue
 			itemlist = list()
 			itemlist += glob(os.path.join(d,'*.mp3'))
 			itemlist += glob(os.path.join(d,'*.MP3'))
@@ -457,7 +459,8 @@ if __name__ == '__main__':
 		con.commit()
 	
 	print ('\t{} total songs fetched from librarypaths.'.format(processed_counter))
-	print ('\t{} songs with <{}> tag defined ({:.1%}).'.format(Id, userfilegrouppingtag, float(Id)/processed_counter))
+	if Id > 0:
+		print ('\t{} songs with <{}> tag defined ({:.1%}).'.format(Id, userfilegrouppingtag, float(Id)/processed_counter))
 	### 
 	### Looking for Associated files and folders
 	###
@@ -572,13 +575,15 @@ if __name__ == '__main__':
 		logging.info ('checking: {}'.format(dir_item))
 		if itemcheck(dir_item) != 'folder':
 			logging.warning ('\tDoes not exists or is not a folder. Skipping')
-			continue			
-		if len (os.listdir (dir_item)) == 0:
-			if not dummy:
-				shutil.rmtree (dir_item)
-				logging.info ('\tDeleted (was empty)')
-			print ("\t\tempty folder removed: {} {}".format (trimto (dir_item,40) ,dummymsg))
-			logging.info ('Empty folder removed: {}'.format(dir_item))
+			continue
+		while dir_item not in librarypaths :
+			if len (os.listdir (dir_item)) == 0:
+				if not dummy:
+					shutil.rmtree (dir_item)
+					logging.info ('\tDeleted (was empty)')
+				print ("\t\tempty folder removed: {} {}".format (trimto (dir_item,40) ,dummymsg))
+				logging.info ('Empty folder removed: {}'.format(dir_item))
+			dir_item = os.path.dirname (dir_item)
 
 	print ('Done!')
 
