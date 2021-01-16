@@ -30,11 +30,9 @@ You can afterwards, edit id3 tags... title, album etc...  by running this script
 this script relies on quodlibet
 eyed3 python library
 
-you can install them tipyng:
+you can install them typing:
 
-**    apt-get install quodlibet python3-eyed3
-**
-
+    apt-get install quodlibet python3-eyed3
 
 ### Aim:
 Keep a coherent tree of files only managing tags at quodlibet.  
