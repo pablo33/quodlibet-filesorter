@@ -26,6 +26,15 @@ Run this script and your mp3 files will get placed as your defined expression.
 
 You can afterwards, edit id3 tags... title, album etc...  by running this script the files will be renamed and moved to the corresponding path.  
 
+### Dependencies
+this script relies on quodlibet
+eyed3 python library
+
+you can install them tipyng:
+
+**    apt-get install quodlibet python3-eyed3
+**
+
 
 ### Aim:
 Keep a coherent tree of files only managing tags at quodlibet.  
