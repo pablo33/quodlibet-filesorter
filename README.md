@@ -32,7 +32,7 @@ eyed3 python library
 
 you can install them typing:
 
-    apt-get install quodlibet python3-eyed3
+    sudo apt-get install quodlibet python3-eyed3
 
 ### Aim:
 Keep a coherent tree of files only managing tags at quodlibet.  
