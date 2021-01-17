@@ -12,7 +12,7 @@ If you use Quodlibet to manage your music, and set your id3 Tags, this script is
 
 You can learn more about quodlibet vissiting it's page : <https://quodlibet.readthedocs.io/en/latest/index.html>  
 
-## What does this script does
+## What does this script do
 This script reads Quodlibet config information about where are placed your music libraries.  
 It reads Id3 tags from the mp3 files and moves them based on your custom _path expression_ for each file. The _path expression_ is also stored as an id3 tag into the file. This allows you to easily manage it from quodlibet itself.  
 
@@ -30,7 +30,7 @@ You can afterwards, edit id3 tags... title, album etc...  by running this script
 this script relies on quodlibet
 eyed3 python library
 
-you can install them typing:
+you can install both of them typing:
 
     sudo apt-get install quodlibet python3-eyed3
 
