@@ -1,6 +1,8 @@
 Your launcher in your ubuntu desktop:
 
 1) put quodlibet_filesorter.desktop file in your ~/.local/share/applications directory
+	
+	edit it, and fit with your user paths
 
 2) decompress icons_hicolor.zip contents in your ~/.local/share/icons folder
 
