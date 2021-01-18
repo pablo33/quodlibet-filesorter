@@ -283,12 +283,15 @@ dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive fo
 #filepaths = [os.path.join(os.getenv('HOME'),'Music'), ]		# List of initial paths to search.
 
 dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
+dummymsg = ''
 
 
 #========== Command line options ==========
 try:
 	if argv[1] == '--dummy':
 		dummy = True
+		dummymsg = '(dummy mode)'
+		print ('** (Running in Dummy mode) **')
 except:
 	pass
 
@@ -296,19 +299,14 @@ except:
 #========== Fetch library paths ==========
 scanline = fetchtagline (qlcfgfile,'scan','=')
 librarypaths = getmetasep (scanline,':')
-
-dummymsg = ''
-if dummy:
-	dummymsg = '(dummy mode)'
-	print ('** (Running in Dummy mode) **')
-print ('Folders to read:', librarypaths)
+print ('libraries to read:', librarypaths)
 
 
 #=====================================
 # Main
 #=====================================
 if __name__ == '__main__':
-	print ('Running, have a good time. {}'.format(dummymsg))
+	print ('Running, this could take a while. {}'.format(dummymsg))
 
 	loginlevel = 'INFO'  # INFO ,DEBUG
 	logpath = './'
@@ -362,11 +360,10 @@ if __name__ == '__main__':
 	print ('\tScanning librarypaths for mp3 files')
 	# Iterating over scanned paths
 	for scanpath in librarypaths:
-		Id, processed_counter = 0, 0
+		folders_counter, processed_counter = 0, 0
 		### iterate over mp3 files. addressing Database
 		listree = lsdirectorytree (scanpath)
 		progressindicator = Progresspercent (len(listree), title = '\tScanning for files in directories', showpartial=True)
-		folders_counter = 0
 		for d in listree:
 			if "/.Trash-1000/" in d:	#is a trash folder, ignoring
 				continue
@@ -463,13 +460,12 @@ if __name__ == '__main__':
 										'Qfile'
 										)
 						con.execute ("INSERT INTO SongsTable VALUES (?,?,?,?,?,?,?,?,?)", valuetuple)
-						Id += 1
 			progressindicator.showprogress (folders_counter); folders_counter += 1
 		con.commit()
 	
 	print ('\t{} total songs fetched from librarypaths.'.format(processed_counter))
-	if Id > 0:
-		print ('\t{} songs with <{}> tag defined ({:.1%}).'.format(Id, userfilegrouppingtag, float(Id)/processed_counter))
+	if processed_counter > 0:
+		print ('\t{} songs with <{}> tag defined ({:.1%}).'.format(processed_counter, userfilegrouppingtag, float(processed_counter)/processed_counter))
 	### 
 	### Looking for Associated files and folders
 	###
