@@ -588,6 +588,8 @@ if __name__ == '__main__':
 					logging.info ('\tDeleted (was empty)')
 				print ("\t\tempty folder removed: {} {}".format (trimto (dir_item,40) ,dummymsg))
 				logging.info ('Empty folder removed: {}'.format(dir_item))
+			else:
+				break
 			dir_item = os.path.dirname (dir_item)
 
 	print ('Done!')
