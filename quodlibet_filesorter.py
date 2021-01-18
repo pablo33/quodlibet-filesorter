@@ -5,7 +5,7 @@ import sqlite3
 import shutil, re, os, logging
 from datetime import datetime
 from glob import glob
-from sys import stdout
+from sys import stdout, argv
 from readtag import get_id3Tag		# local library
 
 __version__ = "2.0.0"
@@ -279,10 +279,19 @@ userfilegrouppingtag = 'filegroupping'  # Tag name which defines the desired pat
 
 qluserfolder  = os.path.join (os.getenv('HOME'),'.quodlibet') 
 qlcfgfile     = os.path.join (qluserfolder,		'config')
+dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive for processing
 #filepaths = [os.path.join(os.getenv('HOME'),'Music'), ]		# List of initial paths to search.
 
-dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive for processing
 dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
+
+
+#========== Command line options ==========
+try:
+	if argv[1] == '--dummy':
+		dummy = True
+except:
+	pass
+
 
 #========== Fetch library paths ==========
 scanline = fetchtagline (qlcfgfile,'scan','=')
