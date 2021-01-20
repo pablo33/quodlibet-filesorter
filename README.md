@@ -2,7 +2,7 @@
 Reorganize your mp3 music collection at the file system based on their id3 tags, managed with quodlibet.  
 
 ## Why do I use this script
-I manage my mp3 files with quodlibet. It is easy to edit and manage ID3 tags with Quolibet, but I also like to have a structured an ordered mp3 collection on the system folders. So I have to manually edit names or move the files, to do that. This is manually done and it requires a little work or configuration to get done. With this script I easily maintain a coherent folder structure for my mp3 music collection based on their id3 tags.  
+I manage my mp3 files with quodlibet. It is easy to edit and manage ID3 tags with Quolibet, but I also like to have a structured an ordered mp3 collection on the system folders. So I have to manually edit names or move the files, to do that. This is manually done and it requires a little work or configuration to get done. You can get tags from the path, this is OK, but with this script you can put 'your tags on the path' and in a consistent manner. With this script I easily maintain a coherent file-folder structure for my mp3 music collection based on their id3 tags. So I only care about a correct metadation.  
 
 For example, if I change an artist name, album, or even the name, their tracknumbers, genre, running this script will reorder my mp3 on the filesystem. It will rename or move the mp3 files accordingly. Even more, I use to store jpg images and other kind of files, or folders besides the mp3, with this script, extra folders or files are also moved following the associated mp3s.  
 
@@ -24,13 +24,13 @@ You can easily assign this expression and set it into a bunch of selected files 
 
 Run this script and your mp3 files will get placed as your defined expression.  
 
-You can afterwards, edit id3 tags... title, album etc...  by running this script the files will be renamed and moved to the corresponding path.  
+You can afterwards, edit id3 tags... title, album etc...  by running this script the files will be renamed and moved to the corresponding path and with their associated extra files.  
 
 ### Dependencies
-This script relies on quodlibet custom tag and 
+This script relies on quodlibet custom taggin and 
 eyed3 python library
 
-You can install both of them typing:
+You can install them typing:
 
     sudo apt-get install quodlibet python3-eyed3
 
