@@ -329,9 +329,12 @@ if __name__ == '__main__':
 
 
 	#initializing DB
+	"""
 	if os.path.isfile(dbpathandname):
 		os.remove (dbpathandname)
+	"""
 	con = sqlite3.connect (dbpathandname)
+	"""
 	con.execute ("CREATE TABLE SongsTable \
 		(id INT PRIMARY KEY 	NOT NULL, \
 		mountpoint	TEXT 	NOT NULL, \
@@ -600,12 +603,12 @@ if __name__ == '__main__':
 							)
 				con.execute ("INSERT INTO Playlists VALUES (?,?,?,?)", valuetuple)
 		con.commit ()
-
+	"""
 	# Writting changes
-	AfectedPlaylists = con.execute ('SELECT name from Playlists_new where originfile <> targetpath GROUP BY name')
+	AfectedPlaylists = con.execute ('SELECT playlistfile from Playlists_new where originfile <> targetpath GROUP BY playlistfile')
 	cursor = con.cursor ()
 	for Playlist in AfectedPlaylists:
-		cursor.execute ('SELECT originfile, targetpath FROM Playlists_new WHERE name=? ORDER BY id', Playlist)
+		cursor.execute ('SELECT originfile, targetpath FROM Playlists_new WHERE playlistfile=? ORDER BY id', Playlist)
 		if not dummy:
 			with open (Playlist[0], 'w') as txt:
 				for entry in cursor:
@@ -637,6 +640,4 @@ if __name__ == '__main__':
 				break
 			dir_item = os.path.dirname (dir_item)
 	con.close ()
-	print ('Done!')
-	print ('Visit https://github.com/pablo33/quodlibet-filesorter for updates')
-
+	print ('Done!', 'Visit https://github.com/pablo33/quodlibet-filesorter for updates')
