@@ -8,7 +8,7 @@ from glob import glob
 from sys import stdout, argv
 from readtag import get_id3Tag		# local library
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 #=====================================
 # Custom Error Classes
@@ -356,7 +356,7 @@ if __name__ == '__main__':
 					SELECT fullpathfilename as originfile, targetpath, fileflag \
 					FROM songstable) \
 				WHERE originfile <> targetpath ORDER BY originfile')
-
+	
 	print ('\tScanning librarypaths for mp3 files')
 	# Iterating over scanned paths
 	for scanpath in librarypaths:
@@ -570,6 +570,51 @@ if __name__ == '__main__':
 		logging.debug ('\t file moved: {}'.format(dest))
 		logging.debug ('')
 	###
+	### fixing playlists
+	###
+	print ('\tChecking Playlists')
+	
+	# Create playlist DataBase and View
+	con.execute ("CREATE TABLE Playlists \
+		(id INT PRIMARY KEY 	NOT NULL, \
+		playlistfile	TEXT 	NOT NULL, \
+		position		INT 	NOT NULL, \
+		originfile		TEXT 	NOT NULL)" )
+	con.execute ("CREATE VIEW Playlists_new AS SELECT p.*, s.targetpath FROM Playlists as p LEFT JOIN SongsTable AS s ON p.originfile=s.fullpathfilename ORDER BY id")
+	
+	# Populate DB with playlists
+	playlistfolder = os.path.join(qluserfolder,"playlists")
+	playfiles = glob (os.path.join(playlistfolder,"*"))
+	processed_counter = 0
+	for f in playfiles:
+		linecounter = 0
+		print (f)
+		with open (f, "r") as txt:
+			for line in txt:
+				linecounter += 1
+				processed_counter += 1
+				valuetuple = ( 	processed_counter,
+								f,
+								linecounter,
+								line[:-1]
+							)
+				con.execute ("INSERT INTO Playlists VALUES (?,?,?,?)", valuetuple)
+		con.commit ()
+
+	# Writting changes
+	AfectedPlaylists = con.execute ('SELECT name from Playlists_new where originfile <> targetpath GROUP BY name')
+	cursor = con.cursor ()
+	for Playlist in AfectedPlaylists:
+		cursor.execute ('SELECT originfile, targetpath FROM Playlists_new WHERE name=? ORDER BY id', Playlist)
+		if not dummy:
+			with open (Playlist[0], 'w') as txt:
+				for entry in cursor:
+					towrite = entry[1]
+					if towrite == None:
+						towrite = entry [0]
+					txt.write (towrite+"\n")
+	# 
+	###
 	### Removing empty folders
 	###
 	print ('\tRemoving empty folders.')
@@ -591,6 +636,7 @@ if __name__ == '__main__':
 			else:
 				break
 			dir_item = os.path.dirname (dir_item)
-
+	con.close ()
 	print ('Done!')
+	print ('Visit https://github.com/pablo33/quodlibet-filesorter for updates')
 
