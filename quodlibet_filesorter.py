@@ -329,12 +329,12 @@ if __name__ == '__main__':
 
 
 	#initializing DB
-	"""
+	
 	if os.path.isfile(dbpathandname):
 		os.remove (dbpathandname)
-	"""
+	
 	con = sqlite3.connect (dbpathandname)
-	"""
+	
 	con.execute ("CREATE TABLE SongsTable \
 		(id INT PRIMARY KEY 	NOT NULL, \
 		mountpoint	TEXT 	NOT NULL, \
@@ -603,7 +603,7 @@ if __name__ == '__main__':
 							)
 				con.execute ("INSERT INTO Playlists VALUES (?,?,?,?)", valuetuple)
 		con.commit ()
-	"""
+	
 	# Writting changes
 	AfectedPlaylists = con.execute ('SELECT playlistfile from Playlists_new where originfile <> targetpath GROUP BY playlistfile')
 	cursor = con.cursor ()
