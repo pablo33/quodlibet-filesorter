@@ -48,11 +48,12 @@ def Getchunklist (fgstring, delimitters):
 	example:
 	Getchunklist ('~/Genre/<artist>/<album>/[<cd> -][<track> -]<title>.<ext>', '[]')
 	Generated list is:
-	['~/Genre/<artist>/<album>/',
-	'[<cd> -]',
-	'[<track> -]',
-	'<title>.<ext>'
-	]
+	[
+		'~/Genre/<artist>/<album>/',
+		'[<cd> -]',
+		'[<track> -]',
+		'<title>.<ext>'
+		]
 	'''
 	chunklist = []
 	if fgstring == '' or fgstring == None:
@@ -89,7 +90,7 @@ def CharChange (string):
 
 def itemcheck(pointer):
 	''' returns what kind of a pointer is '''
-	if not (type(pointer) is str or type(pointer) is unicode):
+	if not (type(pointer) is str):
 		raise NotStringError ('Bad input, it must be a string')
 	if pointer.find("//") != -1 :
 		raise MalformedPathError ('Malformed Path, it has double slashes')
@@ -180,7 +181,7 @@ class Progresspercent:
 	it is swhon on the same line'''
 	def __init__ (self, maxValue, title = '', showpartial=True):
 		if title != '':
-			self.title = " {} ".format(title)  # Name of the 
+			self.title = f" {title} "  # Name of the 
 		else:
 			self.title = " "
 		self.maxValue = maxValue
@@ -195,7 +196,7 @@ class Progresspercent:
 			progresspartial = '({:6}/{:<6})'.format(p,self.maxValue)
 		else:
 			progresspartial = ''
-		progresstext = "{}{}{}{}".format (self.title,valuetext, progresspartial, progresspercent)
+		progresstext = f"{self.title}{valuetext}{progresspartial}{progresspercent}"
 		stdout.write (progresstext + chr(8)*len(progresstext))
 		if p == self.maxValue:
 			stdout.write('\n')
@@ -216,7 +217,7 @@ def fetchtagline (textfile,tag,sep):
 	return value
 
 def getmetasep (scanline,sep):
-	scanline = scanline
+	#scanline = scanline
 	chunklist = list()
 	chunk = ''
 	rpos = 0
@@ -270,47 +271,60 @@ def lsdirectorytree( directory = os.getenv( 'HOME')):
 		dirlist += moredirectories
 	return dirlist
 
-
+def getqluserfoder ():
+	folderlist = [
+		os.path.join (os.getenv('HOME') ,'.config/quodlibet'),
+		os.path.join (os.getenv('HOME')	,'.quodlibet'),
+	]
+	for f in folderlist:
+		if itemcheck(f) == 'folder':
+			return f
+	else:
+		print ('no quodlibet config folder was found,\nEnsure that Quodlibet is intalled')
+		exit()
 
 #=====================================
 # User config 
 #=====================================
 userfilegrouppingtag = 'filegroupping'  # Tag name which defines the desired path structure for the file
 
-qluserfolder  = os.path.join (os.getenv('HOME'),'.quodlibet') 
-qlcfgfile     = os.path.join (qluserfolder,		'config')
-dbpathandname = userfilegrouppingtag + '.sqlite3'  # Sqlite3 database archive for processing
+qluserfolder  =  getqluserfoder()
+qlcfgfile     = os.path.join (qluserfolder		,'config')
+dbpathandname = f'{userfilegrouppingtag}.sqlite3'  # Sqlite3 database archive for processing
 #filepaths = [os.path.join(os.getenv('HOME'),'Music'), ]		# List of initial paths to search.
 
-dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
+dummy = True  # Dummy mode, True means that the software will check items, but will not perform file movements
 dummymsg = ''
 
 
 #========== Command line options ==========
+# for now just one parameter --dummy
 try:
 	if argv[1] == '--dummy':
 		dummy = True
-		dummymsg = '(dummy mode)'
-		print ('** (Running in Dummy mode) **')
 except:
 	pass
 
+#========== Dummy message ==========
+if dummy:
+	dummymsg = '(dummy mode)'
+	print ('** (Running in Dummy mode) **')
 
 #========== Fetch library paths ==========
 scanline = fetchtagline (qlcfgfile,'scan','=')
 librarypaths = getmetasep (scanline,':')
-print ('libraries to read:', librarypaths)
+print (f'libraries to read:{librarypaths}')
 
 
 #=====================================
 # Main
 #=====================================
 if __name__ == '__main__':
-	print ('Running, this could take a while. {}'.format(dummymsg))
+	print (f'Running, this could take a while. {dummymsg}')
 
 	loginlevel = 'INFO'  # INFO ,DEBUG
 	logpath = './'
-	logging_file = os.path.join(logpath, userfilegrouppingtag+'.log')
+	logging_file = os.path.join(logpath, f'{userfilegrouppingtag}.log')
 
 
 	# Getting current date and time
@@ -318,16 +332,16 @@ if __name__ == '__main__':
 	today = "/".join([str(now.day), str(now.month), str(now.year)])
 	tohour = ":".join([str(now.hour), str(now.minute)])
 
-	print ('\tLoginlevel: {}'.format(loginlevel))
+	print (f'\tLoginlevel: {loginlevel}')
 	logging.basicConfig(
 		level = loginlevel,
 		format = '%(asctime)s : %(levelname)s : %(message)s',
 		filename = logging_file,
 		filemode = 'w'  # a = add
 		)
-	print ('\tLogging to: {}'.format(logging_file))
+	print (f'\tLogging to: {logging_file}')
 
-
+	logging.info (f'Quodlibet config folder fount at {qluserfolder}')
 	#initializing DB
 	
 	if os.path.isfile(dbpathandname):
@@ -356,12 +370,13 @@ if __name__ == '__main__':
 	con.execute ('CREATE VIEW "filemovements" AS SELECT * FROM (\
 				SELECT * FROM \
 					associatedfiles UNION \
-					SELECT fullpathfilename as originfile, targetpath, fileflag \
+				SELECT fullpathfilename as originfile, targetpath, fileflag \
 					FROM songstable) \
 				WHERE originfile <> targetpath ORDER BY originfile')
 	
 	print ('\tScanning librarypaths for mp3 files')
 	# Iterating over scanned paths
+
 	for scanpath in librarypaths:
 		folders_counter, processed_counter = 0, 0
 		### iterate over mp3 files. addressing Database
@@ -393,6 +408,7 @@ if __name__ == '__main__':
 							tmpfilegroupping = filegroupping [:-6]
 						else:
 							addfilenameflag = True
+							tmpfilegroupping = filegroupping
 						#Splicing filegrouppingtag in chunks
 						chunklist = Getchunklist (tmpfilegroupping,'[]')
 						
@@ -543,7 +559,8 @@ if __name__ == '__main__':
 		logging.debug('\tassociated processed files: {}'.format(associated_counter))
 		logging.debug('\tNumber of associated target Paths: {}'.format (len(ATargetdict)))
 	con.commit ()
-	
+	exit()
+
 	# Reporting
 	T_associated_files = con.execute("SELECT COUNT () FROM filemovements WHERE fileflag = 'Afile'").fetchone()[0]
 	T_afolder_counter = con.execute("SELECT COUNT () FROM filemovements WHERE fileflag = 'Afolder'").fetchone()[0]
