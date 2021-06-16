@@ -293,7 +293,7 @@ qlcfgfile     = os.path.join (qluserfolder		,'config')
 dbpathandname = f'{userfilegrouppingtag}.sqlite3'  # Sqlite3 database archive for processing
 #filepaths = [os.path.join(os.getenv('HOME'),'Music'), ]		# List of initial paths to search.
 
-dummy = True  # Dummy mode, True means that the software will check items, but will not perform file movements
+dummy = False  # Dummy mode, True means that the software will check items, but will not perform file movements
 dummymsg = ''
 
 
@@ -391,28 +391,27 @@ if __name__ == '__main__':
 			itemlist += glob(os.path.join(d,'*.Mp3'))
 			if len (itemlist) > 0:
 				for f in itemlist:
+					logging.debug ('>>>>')
+					logging.debug (f'Working on file: {f}')
 					fullpathfilename = os.path.join (d,f)
 					audiofile = get_id3Tag (fullpathfilename)
 					tagvalue = audiofile.readtag (userfilegrouppingtag)
-
-					if tagvalue != None:
+					logging.debug (f'\tFilegroupping value:{tagvalue}')
+					if not (tagvalue == None or tagvalue == ''):
 						processed_counter += 1
 						mountpoint = scanpath
 						filefolder = d
 						filename = f
 						extension = os.path.splitext (fullpathfilename)[1]
 						filegroupping = tagvalue
-
 						if filegroupping.endswith ('.<ext>'):
 							addfilenameflag = False
-							tmpfilegroupping = filegroupping [:-6]
+							tmpfilegroupping = filegroupping [:-6] # Deletes '.<ext>' trailing
 						else:
 							addfilenameflag = True
 							tmpfilegroupping = filegroupping
 						#Splicing filegrouppingtag in chunks
 						chunklist = Getchunklist (tmpfilegroupping,'[]')
-						
-						logging.debug ('>>>>')
 						logging.debug ('Chunklist = {}'.format(chunklist))
 						targetpath = ''
 						for chunk in chunklist:
@@ -423,10 +422,14 @@ if __name__ == '__main__':
 							# We start with the chunk, and later perform tag substitutions
 							formedchunk = chunk
 							taglist = re.findall ('<\w*>',chunk)
-							logging.debug ('\tchunk  = {}'.format(chunk))
-							logging.debug ('\ttaglist= {}'.format(taglist))
+							logging.debug (f'\tchunk  = {chunk}')
+							logging.debug (f'\ttaglist= {taglist}')
 							for tag in taglist:
-								metaname = tag[1:-1]
+								metaname = tag[1:-1] # Eliminates < >
+								# Break and return an empty chunk if the tag is not present				
+								if metaname not in audiofile.keys() and optionalflag: 
+									formedchunk = ''
+									break
 								metavalue = audiofile.readtag (metaname)
 								# we trim the slash and total tracks if any
 								if metaname in ('tracknumber','discnumber') :
@@ -435,16 +438,12 @@ if __name__ == '__main__':
 										metavalue = metavalue [:slashpos]
 									if metavalue.isdigit():
 										metavalue = '{:0>2}'.format (metavalue)
-								if metavalue.endswith('[Unknown]'):
-									metavalue = '[no <{}>]'.format(metaname)
-								logging.debug ('\t\tmetaname = {}\tmetavalue = {}'.format(metaname,metavalue))
-
+								#if metavalue.endswith('[Unknown]'):
+								if metavalue == None:
+									metavalue = f'[no <{metaname}>]'
+								logging.debug (f'\t\tmetaname = {metaname}\tmetavalue = {metavalue}')
 								metavalue = CharChange (metavalue)  # clears some non allowed chars
 								formedchunk = formedchunk.replace('<'+ metaname + '>',metavalue)
-								# Break and return an empty chunk if any tag is not present
-								if metaname not in audiofile.keys() and optionalflag: 
-									formedchunk = ''
-									break
 							if optionalflag and formedchunk != '':
 								formedchunk = formedchunk [1:-1]
 							targetpath = targetpath + formedchunk
@@ -453,13 +452,12 @@ if __name__ == '__main__':
 							targetpath = mountpoint + targetpath [1:]
 						# Relative paths are mounted on current song's mount-point
 						elif not targetpath.startswith ('/'):
-							targetpath = mountpoint + targetpath
+							targetpath = os.path.join(mountpoint,targetpath)
 						# Preserving original filename if could not constructo a valid one.
 						if targetpath.endswith('/') and not addfilenameflag:
 							#targetpath = targetpath[:-1]
 							addfilenameflag = True
-							logging.info ('It was not possible construct a valid filename, I will preserve original filename.')
-
+							logging.warning ('It was not possible construct a valid filename, I will preserve original filename.')
 						# Adding original filename if necessary
 						if addfilenameflag:
 							targetpath = targetpath + os.path.basename(fullpathfilename)
@@ -467,7 +465,7 @@ if __name__ == '__main__':
 							targetpath = targetpath + extension
 						targetpath = os.path.normpath (targetpath)
 						targetpath = NoTAlloChReplace (targetpath)
-						logging.debug ('\ttargetpath = {}'.format(targetpath))
+						logging.debug ('\ttargetpath = {targetpath}')
 						valuetuple = ( 	processed_counter,
 										mountpoint,
 										filefolder,
@@ -559,7 +557,6 @@ if __name__ == '__main__':
 		logging.debug('\tassociated processed files: {}'.format(associated_counter))
 		logging.debug('\tNumber of associated target Paths: {}'.format (len(ATargetdict)))
 	con.commit ()
-	exit()
 
 	# Reporting
 	T_associated_files = con.execute("SELECT COUNT () FROM filemovements WHERE fileflag = 'Afile'").fetchone()[0]
@@ -567,8 +564,8 @@ if __name__ == '__main__':
 	pluralfi, pluralfo = 's','s'
 	if T_associated_files == 1: pluralfi = ''
 	if T_afolder_counter == 1: pluralfo = ''
-	print ('\t\t{} associated file{} found.'.format(T_associated_files, pluralfi))
-	print ('\t\t{} associated folder{} found.'.format(T_afolder_counter, pluralfo))
+	print (f'\t\t{T_associated_files} associated file{pluralfi} found.')
+	print (f'\t\t{T_afolder_counter} associated folder{pluralfo} found.')
 
 	###
 	### File operations
@@ -580,14 +577,14 @@ if __name__ == '__main__':
 	print ('\tPerforming file operations.')
 	for origin, dest, fileflag in cursor:
 		progressindicator.showprogress (counter); counter += 1
-		logging.debug ('\t {}	from: {}'.format(fileflag,origin))
+		logging.debug (f'\t {fileflag}	from: {origin}')
 		if itemcheck (origin) == '':
-			loggingmsg = '** Warning, {} at {} does not exist. Skipping'.format(fileflag,trimto(origin,20))
+			loggingmsg = f'** Warning, {fileflag} at {trimto(origin,20)} does not exist. Skipping'
 			print (loggingmsg)
 			logging.warning (loggingmsg)
 			continue
 		movedto = Filemove (origin, dest)
-		logging.debug ('\t file moved: {}'.format(dest))
+		logging.debug (f'\t file moved: {dest}')
 		logging.debug ('')
 	###
 	### fixing playlists
@@ -609,7 +606,7 @@ if __name__ == '__main__':
 	for f in playfiles:
 		linecounter = 0
 		print (f)
-		with open (f, "r") as txt:
+		with open (f, 'r') as txt:
 			for line in txt:
 				linecounter += 1
 				processed_counter += 1
@@ -642,7 +639,7 @@ if __name__ == '__main__':
 	cursor = con.execute ('SELECT * FROM ScannedFolders')
 	for i in cursor:
 		dir_item = i[0]
-		logging.info ('checking: {}'.format(dir_item))
+		logging.info (f'checking: {dir_item}')
 		if itemcheck(dir_item) != 'folder':
 			logging.warning ('\tDoes not exists or is not a folder. Skipping')
 			continue
@@ -651,8 +648,8 @@ if __name__ == '__main__':
 				if not dummy:
 					shutil.rmtree (dir_item)
 					logging.info ('\tDeleted (was empty)')
-				print ("\t\tempty folder removed: {} {}".format (trimto (dir_item,40) ,dummymsg))
-				logging.info ('Empty folder removed: {}'.format(dir_item))
+				print (f"\t\tempty folder removed: {trimto (dir_item,40)} {dummymsg}")
+				logging.info (f'Empty folder removed: {dir_item}')
 			else:
 				break
 			dir_item = os.path.dirname (dir_item)

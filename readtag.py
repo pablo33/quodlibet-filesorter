@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf_8 -*-
 
+import logging
 import eyed3, re
 
 framedict = {
@@ -138,22 +139,12 @@ class get_id3Tag:
 			value	 = ''
 		
 			if keyframe == 'TXXX':
-				try:
-					mo = re.search ('\\x03(?P<tag>.+)\\x00(?P<value>.+)\\x00', a.data.decode())
-					if mo != None:
-						key   = mo.group ('tag')
-						value = mo.group ('value')
-						if key.startswith ('QuodLibet::'):
-							key = key [11:]
-				except UnicodeDecodeError:
-					value = ''
-
+				key = a.description [11:] # Removes 'Quodlibet::' leading text
+				value = a.text
 			elif keyframe == 'APIC':
 				value = 'Has picture'
-
 			elif keyframe in notusable:
 				value = 'unavailable'
-
 			else:
 				try:
 					value = self.mp3audio.tag.getTextFrame(keyframe)
@@ -162,7 +153,7 @@ class get_id3Tag:
 						value = a.data[1:-1].decode()
 						print ('extra raw method', keyframe)
 					except AssertionError:
-						print ('AssertionError while fetching frame {} separator.'.format(keyframe))
+						print (f'AssertionError while fetching frame {keyframe} separator.')
 						value = 'AssertionError'
 					except UnicodeDecodeError:
 						print ('UnicodeDecodeError while decoding:', a.data)
@@ -178,12 +169,9 @@ class get_id3Tag:
 
 	def readtag (self, key):
 		"""
-		Given a key, returns its text value. Empty keys returns an empty string.
+		Given a key, returns its text value. None in case of no key found.
 			"""
-		value = self.keysdict.get(key)
-		if value == None:
-			value = ''
-		return value
+		return self.keysdict.get(key)
 	
 	def keys (self):
 		"""
