@@ -137,6 +137,16 @@ def Nextfilenumber (dest):
 		newfilename = os.path.join( os.path.dirname(dest), filename [0:-cut] + "(" + str(counter) + ")" + extension)
 	return newfilename
 
+def Nextplaylistname (dest):
+	""" It checks and gives a new name to the playlist.
+		Adds a 0 to the end.
+		If newer file exists, the adds another 0 and so on
+		"""
+	newname = dest+"0"
+	while itemcheck(newname) != "":
+		newname = newname+"0"
+	return newname
+
 def Filemove (origin, dest):
 	""" Moves files or folders,
 	it makes necessary directories,
@@ -271,7 +281,7 @@ def lsdirectorytree( directory = os.getenv( 'HOME')):
 		dirlist += moredirectories
 	return dirlist
 
-def getqluserfoder ():
+def getqluserfolder ():
 	folderlist = [
 		os.path.join (os.getenv('HOME') ,'.config/quodlibet'),
 		os.path.join (os.getenv('HOME')	,'.quodlibet'),
@@ -288,7 +298,7 @@ def getqluserfoder ():
 #=====================================
 userfilegrouppingtag = 'filegroupping'  # Tag name which defines the desired path structure for the file
 
-qluserfolder  =  getqluserfoder()
+qluserfolder  =  getqluserfolder()
 qlcfgfile     = os.path.join (qluserfolder		,'config')
 dbpathandname = f'{userfilegrouppingtag}.sqlite3'  # Sqlite3 database archive for processing
 #filepaths = [os.path.join(os.getenv('HOME'),'Music'), ]		# List of initial paths to search.
@@ -630,6 +640,9 @@ if __name__ == '__main__':
 					if towrite == None:
 						towrite = entry [0]
 					txt.write (towrite+"\n")
+			# renaming playlists
+			shutil.move(Playlist[0],Nextplaylistname(Playlist[0]))
+
 	# 
 	###
 	### Removing empty folders
