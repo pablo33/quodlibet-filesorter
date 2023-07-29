@@ -174,10 +174,17 @@ def Filemove (origin, dest):
 			return dest
 
 	if not dummy:
+		renameflag = False
+		if origin.lower() == dest.lower():
+			renameflag = True
+			dest = dest + "_"
 		if origin_is == 'file':
 			if itemcheck (os.path.dirname(dest)) == '':
 				os.makedirs (os.path.dirname(dest))
 		shutil.move (origin, dest)
+		if renameflag:
+			shutil.move (dest, dest[:-1])
+			dest=dest.removesuffix("_")
 	logging.debug ("\t{} has been moved. {}".format(origin_is,dummymsg))
 	return dest
 
@@ -566,7 +573,25 @@ if __name__ == '__main__':
 		logging.debug('\tleading processed files: {}'.format(leading_counter))
 		logging.debug('\tassociated processed files: {}'.format(associated_counter))
 		logging.debug('\tNumber of associated target Paths: {}'.format (len(ATargetdict)))
-	con.commit ()
+	con.commit()
+
+	## Lowering associated file names and extension simplification.
+	# Lower filenames in targetpath field.
+	# On SAMBA systems, upper and lowercase is the same file/path
+	cursor = con.cursor ()
+	cursor2 = con.cursor ()
+	cursor.execute ('SELECT * FROM Associatedfiles WHERE fileflag = "Afile" ')
+	for originfile, targetpath, fileflag in cursor:
+		#print (originfile, targetpath, fileflag)
+		Tpath, Tfile = os.path.split(targetpath)
+		Tfilename, Tfileext = os.path.splitext(Tfile)
+		Tfilename, Tfileext = Tfilename.lower(), Tfileext.lower()
+		if Tfileext == ".jpeg":
+			Tfileext = ".jpg"
+		newtargetpath = os.path.join(Tpath,Tfilename+Tfileext)
+		if targetpath != newtargetpath:
+			cursor2.execute("UPDATE Associatedfiles SET targetpath=? WHERE originfile=?", (newtargetpath, originfile))
+	con.commit()
 
 	# Reporting
 	T_associated_files = con.execute("SELECT COUNT () FROM filemovements WHERE fileflag = 'Afile'").fetchone()[0]
