@@ -398,7 +398,7 @@ if __name__ == '__main__':
 		folders_counter, processed_counter = 0, 0
 		### iterate over mp3 files. addressing Database
 		listree = lsdirectorytree (scanpath)
-		progressindicator = Progresspercent (len(listree), title = '\tScanning for files in directories', showpartial=True)
+		progressindicator = Progresspercent (len(listree), title = '\tScanning files in directories', showpartial=True)
 		for d in listree:
 			if "/.Trash-1000/" in d:	#is a trash folder, ignoring
 				continue
@@ -412,6 +412,8 @@ if __name__ == '__main__':
 					logging.debug (f'Working on file: {f}')
 					fullpathfilename = os.path.join (d,f)
 					audiofile = get_id3Tag (fullpathfilename)
+					if audiofile == None:
+						continue
 					tagvalue = audiofile.readtag (userfilegrouppingtag)
 					logging.debug (f'\tFilegroupping value:{tagvalue}')
 					if not (tagvalue == None or tagvalue == ''):

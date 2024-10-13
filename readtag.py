@@ -126,49 +126,54 @@ notusable = [
 class get_id3Tag:
 	def __init__ (self, filemp3):
 		self.mp3audio = eyed3.load (filemp3)
-		self.keysdict = dict()
-		self.framelist = list()
-		if self.mp3audio.tag != None:
-			for a in self.mp3audio.tag.frameiter():
-				keyframe = a.id.decode()
-				self.framelist.append (keyframe)
-				try:
-					rawtext  = a.data
-				except KeyError:
-					rawtext = ''
-				key 	 = framedict.get (keyframe)
-				value	 = ''
-			
-				if keyframe == 'TXXX':
-					key = a.description [11:] # Removes 'Quodlibet::' leading text
-					value = a.text
-				elif keyframe == 'APIC':
-					value = 'Has picture'
-				elif keyframe in notusable:
-					value = 'unavailable'
-				else:
+		if self.mp3audio != None:
+			self.keysdict = dict()
+			self.framelist = list()
+			if self.mp3audio.tag != None:
+				for a in self.mp3audio.tag.frameiter():
+					keyframe = a.id.decode()
+					self.framelist.append (keyframe)
 					try:
-						value = self.mp3audio.tag.getTextFrame(keyframe)
-					except:
+						rawtext  = a.data
+					except KeyError:
+						rawtext = ''
+					key 	 = framedict.get (keyframe)
+					value	 = ''
+				
+					if keyframe == 'TXXX':
+						key = a.description [11:] # Removes 'Quodlibet::' leading text
+						value = a.text
+					elif keyframe == 'APIC':
+						value = 'Has picture'
+					elif keyframe in notusable:
+						value = 'unavailable'
+					else:
 						try:
-							value = a.data[1:-1].decode()
-							print ('extra raw method', keyframe)
-						except AssertionError:
-							print (f'AssertionError while fetching frame {keyframe} separator.')
-							value = 'AssertionError'
-						except UnicodeDecodeError:
-							print ('UnicodeDecodeError while decoding:', a.data)
-							print ('Song:', filemp3)
-							print ('Frame', keyframe)
-							value = 'UnicodeDecodeError'
+							value = self.mp3audio.tag.getTextFrame(keyframe)
 						except:
-							value = 'unavailable'
-					value = value.replace ('\x00', ', ')	# For frames with multiple texts in data
-		
-				value = value.strip()
-				self.keysdict [key] = value
+							try:
+								value = a.data[1:-1].decode()
+								print ('extra raw method', keyframe)
+							except AssertionError:
+								print (f'AssertionError while fetching frame {keyframe} separator.')
+								value = 'AssertionError'
+							except UnicodeDecodeError:
+								print ('UnicodeDecodeError while decoding:', a.data)
+								print ('Song:', filemp3)
+								print ('Frame', keyframe)
+								value = 'UnicodeDecodeError'
+							except:
+								value = 'unavailable'
+						value = value.replace ('\x00', ', ')	# For frames with multiple texts in data
+			
+					value = value.strip()
+					self.keysdict [key] = value
+			else:
+				logging.warning (f'No id3 info was found:{filemp3}')
 		else:
-			logging.warning (f'No id3 info was found:{filemp3}')
+			logging.critical (f'Not a valid mp3 file:{filemp3}')
+			return None
+			
 	def readtag (self, key):
 		"""
 		Given a key, returns its text value. None in case of no key found.
