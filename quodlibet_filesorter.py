@@ -27,7 +27,7 @@ def NoTAlloChReplace (myfilename):
 	''' This function gets a string and replace a set of characters by a underscore.
 	It is intended to clean filenames and add compatibility with Windows and OSx file systems
 		'''
-	chars = '\:*?"<>|'
+	chars = r'\:*?"<>|'
 	for i in chars:
 		myfilename = myfilename.replace(i, '_')
 	return myfilename
@@ -118,7 +118,7 @@ def Nextfilenumber (dest):
 	filename = os.path.basename (dest)
 	extension = os.path.splitext (dest)[1]
 	# extract secuence
-	expr = '\(\d{1,}\)' + extension
+	expr = r'\(\d{1,}\)' + extension
 	mo = re.search (expr, filename)
 	try:
 		grupo = mo.group()
@@ -129,7 +129,7 @@ def Nextfilenumber (dest):
 	else:
 		#  print ("Filename has a final counter expression.  (n).extension ")
 		cut = len (mo.group())
-		countergroup = (re.search ('\d{1,}', grupo))
+		countergroup = (re.search (r'\d{1,}', grupo))
 		counter = int (countergroup.group()) + 1
 	if cut == 0 :
 		newfilename = os.path.join( os.path.dirname(dest), filename + "(" + str(counter) + ")" + extension)
@@ -438,7 +438,7 @@ if __name__ == '__main__':
 								optionalflag = True
 							# We start with the chunk, and later perform tag substitutions
 							formedchunk = chunk
-							taglist = re.findall ('<\w*>',chunk)
+							taglist = re.findall (r'<\w*>',chunk)
 							logging.debug (f'\tchunk  = {chunk}')
 							logging.debug (f'\ttaglist= {taglist}')
 							for tag in taglist:
