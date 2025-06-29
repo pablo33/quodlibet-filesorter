@@ -361,9 +361,14 @@ if __name__ == '__main__':
 	logging.info (f'Quodlibet config folder fount at {qluserfolder}')
 	#initializing DB
 	
+	maxmtime = None
 	if os.path.isfile(dbpathandname):
+		con = sqlite3.connect (dbpathandname)
+		maxmtime = con.execute ('SELECT MAX (modif) FROM SongsTable').fetchone()[0]
+		logging.info("Found old database file, I will use it to retrieve the last modified time of the last processed file.")
+		if maxmtime:
+			print ('Using last modified time to exclude unmodified files')
 		os.remove (dbpathandname)
-	
 	con = sqlite3.connect (dbpathandname)
 	
 	con.execute ("CREATE TABLE SongsTable \
@@ -371,6 +376,7 @@ if __name__ == '__main__':
 		mountpoint	TEXT 	NOT NULL, \
 		filefolder	TEXT 	NOT NULL, \
 		filename 	TEXT 	NOT NULL, \
+		modif		REAL 	NOT NULL, \
 		format		TEXT 	NOT NULL, \
 		fullpathfilename	TEXT 	NOT NULL,\
 		filegroupping TEXT 	NOT NULL, \
@@ -391,7 +397,7 @@ if __name__ == '__main__':
 					FROM songstable) \
 				WHERE originfile <> targetpath ORDER BY originfile')
 	
-	print ('\tScanning librarypaths for mp3 files')
+	print ('\tScanning librarypaths for mp3 folders.')
 	# Iterating over scanned paths
 
 	for scanpath in librarypaths:
@@ -411,6 +417,12 @@ if __name__ == '__main__':
 					logging.debug ('>>>>')
 					logging.debug (f'Working on file: {f}')
 					fullpathfilename = os.path.join (d,f)
+					modif = os.path.getmtime(fullpathfilename)
+					#Discards old modified files
+					if maxmtime:
+						if modif <= maxmtime:
+							print (f'\tSkipping {fullpathfilename} as it is older than the last processed file.')
+							continue
 					audiofile = get_id3Tag (fullpathfilename)
 					if audiofile == None:
 						continue
@@ -422,7 +434,7 @@ if __name__ == '__main__':
 						filefolder = d
 						filename = f
 						extension = os.path.splitext (fullpathfilename)[1]
-						filegroupping = tagvalue
+						filegroupping:str = tagvalue
 						if filegroupping.endswith ('.<ext>'):
 							addfilenameflag = False
 							tmpfilegroupping = filegroupping [:-6] # Deletes '.<ext>' trailing
@@ -439,7 +451,7 @@ if __name__ == '__main__':
 							if chunk.startswith ('[') and chunk.endswith (']'):
 								optionalflag = True
 							# We start with the chunk, and later perform tag substitutions
-							formedchunk = chunk
+							formedchunk:str = chunk
 							taglist = re.findall (r'<\w*>',chunk)
 							logging.debug (f'\tchunk  = {chunk}')
 							logging.debug (f'\ttaglist= {taglist}')
@@ -449,7 +461,7 @@ if __name__ == '__main__':
 								if metaname not in audiofile.keys() and optionalflag: 
 									formedchunk = ''
 									break
-								metavalue = audiofile.readtag (metaname)
+								metavalue:str = audiofile.readtag (metaname)
 								# we trim the slash and total tracks if any
 								if metaname in ('tracknumber','discnumber') :
 									slashpos = metavalue.find('/')
@@ -489,13 +501,14 @@ if __name__ == '__main__':
 										mountpoint,
 										filefolder,
 										filename,
+										modif,
 										extension[1:],
 										fullpathfilename,
 										filegroupping,
 										targetpath,
 										'Qfile'
 										)
-						con.execute ("INSERT INTO SongsTable VALUES (?,?,?,?,?,?,?,?,?)", valuetuple)
+						con.execute ("INSERT INTO SongsTable VALUES (?,?,?,?,?,?,?,?,?,?)", valuetuple)
 			progressindicator.showprogress (folders_counter); folders_counter += 1
 		con.commit()
 	
@@ -533,7 +546,7 @@ if __name__ == '__main__':
 			logging.debug ('originfile = ' + originfile)
 			if os.path.isfile (originfile):
 				exist, a_targetfile_path = con.execute ('SELECT COUNT (fullpathfilename), targetpath \
-								FROM songstable WHERE \
+								FROM SongsTable WHERE \
 								fullpathfilename = ?', (originfile,)).fetchone()
 				if exist:
 					logging.debug('\t > file is a leading file.')
@@ -626,6 +639,7 @@ if __name__ == '__main__':
 	###
 	### fixing playlists
 	###
+	"""
 	print ('\tChecking Playlists')
 	
 	# Create playlist DataBase and View
@@ -669,7 +683,7 @@ if __name__ == '__main__':
 					txt.write (towrite+"\n")
 			# renaming playlists
 			shutil.move(Playlist[0],Nextplaylistname(Playlist[0]))
-
+	"""
 	# 
 	###
 	### Removing empty folders
