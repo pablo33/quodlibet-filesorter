@@ -406,7 +406,7 @@ if __name__ == '__main__':
 		listree = lsdirectorytree (scanpath)
 		progressindicator = Progresspercent (len(listree), title = '\tScanning files in directories', showpartial=True)
 		for d in listree:
-			if "/.Trash-1000/" in d:	#is a trash folder, ignoring
+			if "/.Trash" in d:	#is a trash folder, ignoring
 				continue
 			itemlist = list()
 			itemlist += glob(os.path.join(d,'*.mp3'))
@@ -561,6 +561,9 @@ if __name__ == '__main__':
 				associated_counter += 1
 				typeflag = 'Afile'
 			elif os.path.isdir (originfile):
+				if "/.Trash" in originfile:
+					logging.debug ('\t > folder is a Trash folder, skipping: {}'.format(originfile))
+					continue
 				exist = con.execute ('SELECT COUNT (filefolder) \
 								FROM Allfolders \
 								WHERE filefolder LIKE ?', (originfile+'%',)).fetchone()[0]
@@ -574,6 +577,12 @@ if __name__ == '__main__':
 				logging.warning ('This may be a symbolic link. It will be discarded')
 				continue
 			Aitemdict [item] = typeflag
+
+
+
+
+
+
 		## Selecting the most suitable destination
 		winnerpath = ''
 		points = 0
