@@ -431,7 +431,14 @@ if __name__ == '__main__':
 					audiofile = get_id3Tag (fullpathfilename)
 					if audiofile == None:
 						continue
-					tagvalue = audiofile.readtag (userfilegrouppingtag)
+					taglist = audiofile.readtag (userfilegrouppingtag)
+					if taglist:
+						if len (taglist) > 1:
+							logging.info (f'\t Processing: {fullpathfilename}')
+							logging.info (f'\t\tTag {userfilegrouppingtag} has multiple values, using the first one.')
+						tagvalue:str = taglist[0]
+					else:
+						tagvalue = None
 					logging.debug (f'\tFilegroupping value:{tagvalue}')
 					if not (tagvalue == None or tagvalue == ''):
 						processed_counter += 1
@@ -466,7 +473,11 @@ if __name__ == '__main__':
 								if metaname not in audiofile.keys() and optionalflag: 
 									formedchunk = ''
 									break
-								metavalue:str = audiofile.readtag (metaname)
+								taglist:list = audiofile.readtag (metaname)
+								if len (taglist) > 1:
+									logging.info (f'\t Processing: {fullpathfilename}')
+									logging.info (f'\t\t Tag {metaname} has multiple values, using the first one.')
+								metavalue:str = taglist[0]
 								# we trim the slash and total tracks if any
 								if metaname in ('tracknumber','discnumber') :
 									slashpos = metavalue.find('/')

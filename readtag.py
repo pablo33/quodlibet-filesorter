@@ -125,6 +125,7 @@ notusable = [
 
 class get_id3Tag:
 	def __init__ (self, filemp3):
+		self.filemp3 = filemp3
 		self.mp3audio = eyed3.load (filemp3)
 		if self.mp3audio != None:
 			self.keysdict = dict()
@@ -164,7 +165,7 @@ class get_id3Tag:
 								value = 'UnicodeDecodeError'
 							except:
 								value = 'unavailable'
-						value = value.replace ('\x00', ', ')	# For frames with multiple texts in data
+						#value = value.replace ('\x00', '\t')	# For frames with multiple texts in data
 			
 					value = value.strip()
 					self.keysdict [key] = value
@@ -176,9 +177,15 @@ class get_id3Tag:
 			
 	def readtag (self, key):
 		"""
-		Given a key, returns its text value. None in case of no key found.
+		Given a key, returns its as a list of text values. None in case of no key found.
 			"""
-		return self.keysdict.get(key)
+		rawkey = self.keysdict.get(key)
+		if isinstance(rawkey,str):
+			return str(rawkey).split ('\x00')
+		if rawkey != None:
+			logging.warning (f"\t Procesing: {self.filemp3}")
+			logging.warning (f'\t\t Not a valid string found for key:{key}:{rawkey}')
+		return None
 	
 	def keys (self):
 		"""
