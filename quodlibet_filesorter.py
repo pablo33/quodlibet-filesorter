@@ -423,6 +423,11 @@ if __name__ == '__main__':
 						if modif <= maxmtime:
 							print (f'\tSkipping {fullpathfilename} as it is older than the last processed file.')
 							continue
+					#Discarding non files items
+					if itemcheck (fullpathfilename) != 'file':
+						logging.warning('Item is not a file, skipping!: {}'.format(fullpathfilename))
+						continue
+					# Reading tags
 					audiofile = get_id3Tag (fullpathfilename)
 					if audiofile == None:
 						continue
