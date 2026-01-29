@@ -4,7 +4,7 @@
 import sqlite3
 import shutil, re, os, logging
 from datetime import datetime
-from glob import glob
+import glob
 from sys import stdout, argv
 from readtag import get_id3Tag		# local library
 
@@ -406,12 +406,11 @@ if __name__ == '__main__':
 		listree = lsdirectorytree (scanpath)
 		progressindicator = Progresspercent (len(listree), title = '\tScanning files in directories', showpartial=True)
 		for d in listree:
+			logging.debug (f"#### Scanning directory: {d}")
 			if "/.Trash" in d:	#is a trash folder, ignoring
 				continue
 			itemlist = list()
-			itemlist += glob(os.path.join(d,'*.mp3'))
-			itemlist += glob(os.path.join(d,'*.MP3'))
-			itemlist += glob(os.path.join(d,'*.Mp3'))
+			itemlist += glob.glob (os.path.join(glob.escape(d),'*.[mM][Pp]3'))
 			if len (itemlist) > 0:
 				for f in itemlist:
 					logging.debug ('>>>>')
@@ -421,7 +420,7 @@ if __name__ == '__main__':
 					#Discards old modified files
 					if maxmtime:
 						if modif <= maxmtime:
-							print (f'\tSkipping {fullpathfilename} as it is older than the last processed file.')
+							#print (f'\tSkipping {fullpathfilename} as it is older than the last processed file.')
 							continue
 					#Discarding non files items
 					if itemcheck (fullpathfilename) != 'file':
@@ -677,7 +676,7 @@ if __name__ == '__main__':
 	
 	# Populate DB with playlists
 	playlistfolder = os.path.join(qluserfolder,"playlists")
-	playfiles = glob (os.path.join(playlistfolder,"*"))
+	playfiles = glob.glob (os.path.join(playlistfolder,"*"))
 	processed_counter = 0
 	for f in playfiles:
 		linecounter = 0
