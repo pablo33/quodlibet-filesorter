@@ -472,23 +472,24 @@ if __name__ == '__main__':
 								if metaname not in audiofile.keys() and optionalflag: 
 									formedchunk = ''
 									break
-								taglist:list = audiofile.readtag (metaname)
-								if len (taglist) > 1:
-									logging.info (f'\t Processing: {fullpathfilename}')
-									logging.info (f'\t\t Tag {metaname} has multiple values, using the first one.')
-								metavalue:str = taglist[0]
-								# we trim the slash and total tracks if any
-								if metaname in ('tracknumber','discnumber') :
-									slashpos = metavalue.find('/')
-									if slashpos != -1:
-										metavalue = metavalue [:slashpos]
-									if metavalue.isdigit():
-										metavalue = '{:0>2}'.format (metavalue)
-								#if metavalue.endswith('[Unknown]'):
-								if metavalue == None:
+								taglst2:list = audiofile.readtag (metaname)
+								if taglst2 == None:
 									metavalue = f'[no <{metaname}>]'
-								logging.debug (f'\t\tmetaname = {metaname}\tmetavalue = {metavalue}')
-								metavalue = CharChange (metavalue)  # clears some non allowed chars
+								else:
+									if len (taglst2) > 1:
+										logging.info (f'\t Processing: {fullpathfilename}')
+										logging.info (f'\t\t Tag {metaname} has multiple values, using the first one.')
+									metavalue:str = taglst2[0]
+									# For track numbering we trim the slash and total tracks if any
+									if metaname in ('tracknumber','discnumber') :
+										slashpos = metavalue.find('/')
+										if slashpos != -1:
+											metavalue = metavalue [:slashpos]
+										if metavalue.isdigit():
+											metavalue = '{:0>2}'.format (metavalue)
+									#if metavalue.endswith('[Unknown]'):
+									logging.debug (f'\t\tmetaname = {metaname}\tmetavalue = {metavalue}')
+									metavalue = CharChange (metavalue)  # clears some non allowed chars
 								formedchunk = formedchunk.replace('<'+ metaname + '>',metavalue)
 							if optionalflag and formedchunk != '':
 								formedchunk = formedchunk [1:-1]
