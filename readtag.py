@@ -124,7 +124,20 @@ notusable = [
 	]
 
 class get_id3Tag:
+
+	#####    Decorators     #####
+	def validfile (fx):
+		""" Executes if self.validmp3 is True """
+		def decorator (*args, **kw_args):
+			valid = args[0].validmp3
+			if valid:
+				return fx(*args, **kw_args)
+			print ("Not a valid mp3 file!!, can't perform this operation on it")
+		return decorator
+	#####    end decorators     #####
+
 	def __init__ (self, filemp3):
+		self.validmp3 = True
 		self.filemp3 = filemp3
 		self.mp3audio = eyed3.load (filemp3)
 		if self.mp3audio != None:
@@ -173,20 +186,27 @@ class get_id3Tag:
 				logging.warning (f'No id3 info was found:{filemp3}')
 		else:
 			logging.critical (f'Not a valid mp3 file:{filemp3}')
+			self.validmp3 = False
 			return None
-			
+
+	@validfile	
 	def readtag (self, key):
 		"""
 		Given a key, returns its as a list of text values. None in case of no key found.
 			"""
-		rawkey = self.keysdict.get(key)
+		try:
+			rawkey = self.keysdict.get(key)
+		except AttributeError:
+			logging.critical (f"Error recuperando el tag: {key}")
+			return None
 		if isinstance(rawkey,str):
 			return str(rawkey).split ('\x00')
 		if rawkey != None:
 			logging.warning (f"\t Procesing: {self.filemp3}")
-			logging.warning (f'\t\t Not a valid string found for key:{key}:{rawkey}')
+			logging.warning (f"\t\t Not a valid string found for key:{key}:{rawkey}")
 		return None
-	
+
+	@validfile
 	def keys (self):
 		"""
 		Returns a list of usable keys
@@ -196,6 +216,7 @@ class get_id3Tag:
 			keyslist.append (item)
 		return keyslist
 
+	@validfile
 	def frames (self):
 		"""
 		Returns a list of frames in order
